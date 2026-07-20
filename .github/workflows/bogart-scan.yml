@@ -1,0 +1,81 @@
+name: Bogart Recon Scan
+
+on:
+  workflow_dispatch:
+    inputs:
+      target_domain:
+        description: "Target domain (must match your authorized scope)"
+        required: true
+        type: string
+      scope_allowlist:
+        description: "Comma-separated scope patterns, e.g. *.example.com, example.com"
+        required: true
+        type: string
+      program_name:
+        description: "Program name (shown in the report header)"
+        required: false
+        type: string
+        default: "Bug Bounty Program"
+
+jobs:
+  scan:
+    runs-on: ubuntu-latest
+    timeout-minutes: 150
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: "1.24"
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install Go-based recon/scan tools
+        run: |
+          go install -v github.com/projectdiscovery/subfinder/v2/cmd/subfinder@latest
+          go install -v github.com/projectdiscovery/httpx/cmd/httpx@latest
+          go install -v github.com/projectdiscovery/katana/cmd/katana@latest
+          go install -v github.com/projectdiscovery/nuclei/v3/cmd/nuclei@latest
+          go install -v github.com/lc/gau/v2/cmd/gau@latest
+          go install -v github.com/tomnomnom/waybackurls@latest
+          go install -v github.com/zan8in/afrog/v3/cmd/afrog@latest
+          echo "$HOME/go/bin" >> "$GITHUB_PATH"
+
+      - name: Install massdns (built from source - no go install path exists for it)
+        run: |
+          git clone --depth 1 https://github.com/blechschmidt/massdns.git /tmp/massdns
+          cd /tmp/massdns && make
+          sudo cp bin/massdns /usr/local/bin/
+          sudo mkdir -p /usr/share/massdns/lists
+          curl -sL https://raw.githubusercontent.com/trickest/resolvers/main/resolvers.txt \
+            -o /tmp/resolvers.txt
+          sudo cp /tmp/resolvers.txt /usr/share/massdns/lists/resolvers.txt
+
+      - name: Install Python dependencies
+        run: pip install requests dnspython arjun
+
+      - name: Run bogart
+        env:
+          BOGART_TARGET_DOMAIN: ${{ inputs.target_domain }}
+          BOGART_SCOPE_ALLOWLIST: ${{ inputs.scope_allowlist }}
+          BOGART_PROGRAM_NAME: ${{ inputs.program_name }}
+          BOGART_ENABLE_HEAVY_TOOLS: "true"
+          TG_BOT_TOKEN: ${{ secrets.TG_BOT_TOKEN }}
+          TG_CHAT_ID: ${{ secrets.TG_CHAT_ID }}
+        run: python3 bogart/bogart_v6.py
+
+      - name: Upload results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: bogart-report-${{ github.run_id }}
+          path: |
+            BOGART_REPORT_*.md
+            bogart.db
+          retention-days: 30
+          if-no-files-found: warn

@@ -1,0 +1,68 @@
+name: Argo Static Security Audit
+
+# Drop this into any repo you want Argo to audit. Defaults to the free mock
+# runner (fixture data, proves the pipeline works, zero cost). Switch to
+# "headless" and add an ANTHROPIC_API_KEY repo secret for a real audit.
+on:
+  workflow_dispatch:
+    inputs:
+      repo_path:
+        description: "Path within this checkout to audit ('.' = whole repo)"
+        required: false
+        type: string
+        default: "."
+      runner:
+        description: "Backend: 'mock' is free/fixtures, 'headless' is a real paid Claude Code audit"
+        required: true
+        type: choice
+        default: "mock"
+        options:
+          - mock
+          - headless
+
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install Argo
+        run: |
+          git clone --depth 1 https://github.com/gigioneggiando/argo.git /tmp/argo
+          cd /tmp/argo
+          # Upstream pyproject.toml pairs a legacy license classifier with a
+          # PEP 639 SPDX `license` field - modern setuptools rejects that
+          # combo outright. Strip the redundant classifier before installing.
+          sed -i '/License :: OSI Approved :: Apache Software License/d' pyproject.toml
+          pip install -e .
+
+      - name: Set up Node (only needed for the headless/Claude Code runner)
+        if: inputs.runner == 'headless'
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Install Claude Code CLI (only for headless runner)
+        if: inputs.runner == 'headless'
+        run: npm install -g @anthropic-ai/claude-code
+
+      - name: Run Argo
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: argo pipeline --repo "${{ inputs.repo_path }}" --runner "${{ inputs.runner }}"
+
+      - name: Upload report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: argo-report-${{ github.run_id }}
+          path: runs/
+          retention-days: 30
+          if-no-files-found: warn
