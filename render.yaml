@@ -1,0 +1,56 @@
+# NOTE: Render's own free Postgres auto-deletes after 30 days + a 14-day
+# grace period - not acceptable for a CRM holding case data you care about.
+# Use a permanent-free external Postgres instead (Neon.tech or Supabase both
+# work, no card required, no expiry) and paste its connection details into
+# the backend service's env vars in the Render dashboard after this Blueprint
+# deploys (they're left as `sync: false` placeholders below on purpose).
+
+services:
+  - type: web
+    name: ghost-crm-backend
+    runtime: docker
+    dockerContext: ./ghost/backend
+    dockerfilePath: ./ghost/backend/Dockerfile
+    plan: free
+    healthCheckPath: /api/health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 3001
+      - key: DB_HOST
+        sync: false   # paste your Neon/Supabase host here
+      - key: DB_PORT
+        value: 5432
+      - key: DB_USER
+        sync: false   # paste your Neon/Supabase user here
+      - key: DB_PASSWORD
+        sync: false   # paste your Neon/Supabase password here
+      - key: DB_NAME
+        sync: false   # paste your Neon/Supabase database name here
+      - key: SESSION_SECRET
+        generateValue: true
+      - key: FRONTEND_URL
+        fromService:
+          name: ghost-crm-frontend
+          type: web
+          property: host
+
+  - type: web
+    name: ghost-crm-frontend
+    runtime: docker
+    dockerContext: ./ghost/frontend
+    dockerfilePath: ./ghost/frontend/Dockerfile
+    plan: free
+    envVars:
+      # This is the piece the nginx.conf.template fix enables: BACKEND_HOST
+      # resolves to "ghost-crm-backend-xxxx:3001" on Render's private
+      # network, envsubst bakes it into nginx's config at container start,
+      # and /api requests get proxied there - same mechanism as the local
+      # docker-compose "backend:3001" default, just pointed at Render's
+      # internal hostname instead.
+      - key: BACKEND_HOST
+        fromService:
+          name: ghost-crm-backend
+          type: web
+          property: hostport

@@ -1,0 +1,86 @@
+# File: docker-compose.yml
+# This file defines how Docker should run your multi-container application.
+
+services:
+  # Frontend Service (React App served by Nginx)
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: osint-crm-frontend
+    ports:
+      - "8080:80"
+    restart: unless-stopped
+    depends_on:
+      backend:
+        condition: service_healthy
+    networks:
+      - osint-crm-network
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://127.0.0.1:80"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+
+  # Backend Service (Node.js/Express API)
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: osint-crm-backend
+    ports:
+      - "3001:3001"
+    environment:
+      NODE_ENV: production
+      PORT: 3001
+      DB_HOST: db
+      DB_USER: ${DB_USER:-postgres}
+      DB_PASSWORD: ${DB_PASSWORD}
+      DB_NAME: ${DB_NAME:-osint_crm_db}
+      DB_PORT: 5432
+      SESSION_SECRET: ${SESSION_SECRET}
+
+    volumes:
+      - ./backend/public:/usr/src/app/public
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - osint-crm-network
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:3001/api/health"]
+
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # Database Service (PostgreSQL)
+  db:
+    image: postgres:15-alpine
+    container_name: osint-crm-db
+    environment:
+      POSTGRES_USER: ${DB_USER:-postgres}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      POSTGRES_DB: ${DB_NAME:-osint_crm_db}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    restart: unless-stopped
+    networks:
+      - osint-crm-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-postgres} -d ${DB_NAME:-osint_crm_db}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+# Define a network for the services to communicate
+networks:
+  osint-crm-network:
+    driver: bridge
+
+# Define a named volume for persistent PostgreSQL data
+volumes:
+  postgres_data:
