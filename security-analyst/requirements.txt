@@ -1,0 +1,5 @@
+# Only needed to run the demo (vulnerable_examples.py imports these to
+# exercise the DESER-002 and TLS-001 rules). The scanner core itself is
+# pure standard library (ast, re, sqlite3) and needs nothing extra.
+pyyaml
+requests

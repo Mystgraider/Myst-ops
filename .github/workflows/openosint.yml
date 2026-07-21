@@ -1,0 +1,85 @@
+name: OpenOSINT Investigation
+
+# Trigger manually from the Actions tab (works fine from the GitHub mobile
+# app too — Actions > this workflow > Run workflow).
+on:
+  workflow_dispatch:
+    inputs:
+      tool:
+        description: "Which OpenOSINT command to run"
+        required: true
+        type: choice
+        default: "playbook-domain"
+        options:
+          - email                # holehe - no key needed
+          - username              # sherlock - no key needed
+          - dns                   # DNS + SPF/DMARC/DKIM - no key needed
+          - playbook-domain       # deterministic domain recipe (whois+subdomains+dns) - no key needed
+          - shodan                # needs SHODAN_API_KEY secret
+          - virustotal             # needs VIRUSTOTAL_API_KEY secret
+          - censys                 # needs CENSYS_API_ID + CENSYS_SECRET secrets
+          - github                 # needs GH_OSINT_TOKEN secret (optional, higher rate limit)
+          - abuseipdb              # needs ABUSEIPDB_API_KEY secret
+          - ip2location            # needs IP2LOCATION_API_KEY secret
+      target:
+        description: "Target value (email, username, domain, or IP depending on tool)"
+        required: true
+        type: string
+
+jobs:
+  investigate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install OpenOSINT
+        run: |
+          pip install openosint
+          # email/username tools shell out to these separately - not bundled
+          pip install holehe sherlock-project
+
+      - name: Run investigation
+        env:
+          # These only need to exist as repo secrets for the tools that use
+          # them (Settings > Secrets and variables > Actions). Tools that
+          # don't need a key just ignore an empty/missing var.
+          SHODAN_API_KEY: ${{ secrets.SHODAN_API_KEY }}
+          VIRUSTOTAL_API_KEY: ${{ secrets.VIRUSTOTAL_API_KEY }}
+          CENSYS_API_ID: ${{ secrets.CENSYS_API_ID }}
+          CENSYS_SECRET: ${{ secrets.CENSYS_SECRET }}
+          GITHUB_TOKEN: ${{ secrets.GH_OSINT_TOKEN }}
+          ABUSEIPDB_API_KEY: ${{ secrets.ABUSEIPDB_API_KEY }}
+          IP2LOCATION_API_KEY: ${{ secrets.IP2LOCATION_API_KEY }}
+        run: |
+          set -e
+          mkdir -p osint-output
+          TOOL="${{ inputs.tool }}"
+          TARGET="${{ inputs.target }}"
+          # sanitize target for use in a filename (swap @ : / for _)
+          SAFE_TARGET=$(echo "$TARGET" | tr '@:/' '_')
+          STAMP=$(date +%Y%m%d_%H%M%S)
+          LOGFILE="osint-output/${TOOL}_${SAFE_TARGET}_${STAMP}.log"
+
+          # Direct-tool commands only print to stdout - they don't write to
+          # reports/ themselves (only the AI/REPL "shell" mode does), so we
+          # capture it ourselves.
+          if [ "$TOOL" = "playbook-domain" ]; then
+            openosint --no-pdf playbook domain "$TARGET" 2>&1 | tee "$LOGFILE"
+          else
+            openosint --no-pdf "$TOOL" "$TARGET" 2>&1 | tee "$LOGFILE"
+          fi
+
+      - name: Upload results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: openosint-report-${{ github.run_id }}
+          path: osint-output/
+          retention-days: 30
+          if-no-files-found: warn
