@@ -30,6 +30,8 @@ services:
         sync: false   # paste your Neon/Supabase database name here
       - key: DB_SSL
         value: "true"  # Neon/Supabase require SSL; local docker-compose doesn't need this
+      - key: SETUP_TOKEN
+        generateValue: true  # Render generates a random value - check it in the Environment tab, use it once to create your admin user, then feel free to clear it
       - key: SESSION_SECRET
         generateValue: true
       - key: FRONTEND_URL

@@ -40,6 +40,7 @@ services:
       DB_NAME: ${DB_NAME:-osint_crm_db}
       DB_PORT: 5432
       SESSION_SECRET: ${SESSION_SECRET}
+      SETUP_TOKEN: ${SETUP_TOKEN:-}
 
     volumes:
       - ./backend/public:/usr/src/app/public

@@ -51,13 +51,25 @@ deploys, under the backend service's Environment tab).
 6. **Deploy.** First build takes a few minutes (React build + npm install).
    Watch the backend's logs - you should see "Successfully connected to
    the PostgreSQL database" followed by the table creation messages.
-7. **Create your first admin user** via Render's Shell tab on the backend
-   service (pick your own username/password here - don't reuse `ghost` /
-   `admin123` from `QUICK-START.md`, that pair is sitting in this public
-   repo's docs and would be the first thing anyone tries):
-   ```bash
-   node scripts/createAdminSimple.js <username> <password> [email]
-   ```
+7. **Create your first admin user** via the built-in bootstrap endpoint
+   (Render's Shell/SSH requires a paid plan, so this avoids needing one):
+   - In the backend service's **Environment** tab, find `SETUP_TOKEN`
+     (Render auto-generates a random value for it) and copy it.
+   - From your phone or computer, send one request (a REST client app,
+     or curl if you have any shell access at all):
+     ```bash
+     curl -X POST https://<your-backend>.onrender.com/api/setup/create-admin \
+       -H "Content-Type: application/json" \
+       -H "X-Setup-Token: <the SETUP_TOKEN value>" \
+       -d '{"username":"<your-username>","password":"<your-strong-password>"}'
+     ```
+     Password must be 12+ characters and can't be a known-weak default like
+     `admin123`. Don't reuse `ghost`/`admin123` from `QUICK-START.md` either -
+     that pair is sitting in this public repo's docs.
+   - This endpoint only works once - it refuses with a 403 the moment any
+     user already exists, and returns 404 for any request without the
+     correct token (including if `SETUP_TOKEN` were ever unset).
+   - Log in at your frontend URL with the account you just created.
 
 ## Honest caveats before you rely on this
 
