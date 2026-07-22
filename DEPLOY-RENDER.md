@@ -37,12 +37,11 @@ deploys, under the backend service's Environment tab).
 
 1. **Sign up for Neon or Supabase**, create a Postgres database, copy the
    connection details.
-2. **Run the migration** against that database before first deploy:
-   ```bash
-   psql "<your-connection-string>" < ghost/backend/migrations/create_wireless_networks.sql
-   ```
-   (or whatever migration files exist under `ghost/backend/migrations/` - check
-   that folder, there may be more than one depending on which version you're on)
+2. **No manual migration needed** - the backend creates its own schema
+   (`CREATE TABLE IF NOT EXISTS ...` for people, cases, businesses, users,
+   audit_logs, etc.) automatically the first time it boots and connects.
+   Just make sure the database itself exists and is reachable - the app
+   handles the rest.
 3. **Push this repo to GitHub.**
 4. **On Render:** New > Blueprint > connect the repo. Render reads
    `render.yaml` and proposes both services.
@@ -50,8 +49,12 @@ deploys, under the backend service's Environment tab).
    with your Neon/Supabase values (Render will prompt for these since
    they're marked `sync: false`).
 6. **Deploy.** First build takes a few minutes (React build + npm install).
+   Watch the backend's logs - you should see "Successfully connected to
+   the PostgreSQL database" followed by the table creation messages.
 7. **Create your first admin user** via Render's Shell tab on the backend
-   service:
+   service (pick your own username/password here - don't reuse `ghost` /
+   `admin123` from `QUICK-START.md`, that pair is sitting in this public
+   repo's docs and would be the first thing anyone tries):
    ```bash
    node scripts/createAdminSimple.js <username> <password> [email]
    ```
