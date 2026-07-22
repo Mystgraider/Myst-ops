@@ -28,6 +28,8 @@ services:
         sync: false   # paste your Neon/Supabase password here
       - key: DB_NAME
         sync: false   # paste your Neon/Supabase database name here
+      - key: DB_SSL
+        value: "true"  # Neon/Supabase require SSL; local docker-compose doesn't need this
       - key: SESSION_SECRET
         generateValue: true
       - key: FRONTEND_URL

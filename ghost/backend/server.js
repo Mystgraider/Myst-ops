@@ -107,6 +107,7 @@ const pool = new Pool({
   database: process.env.DB_NAME || 'osint_crm_db',
   password: process.env.DB_PASSWORD,
   port: parseInt(process.env.DB_PORT || '5432', 10),
+  ssl: process.env.DB_SSL === 'true' ? { rejectUnauthorized: false } : false,
 });
 
 // Expose pool on app.locals so middleware can access it without circular requires

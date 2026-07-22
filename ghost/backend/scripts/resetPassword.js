@@ -12,6 +12,7 @@ const dbConfig = {
   database: process.env.DB_NAME || 'osint_crm_db',
   password: process.env.DB_PASSWORD || 'changeme',
   port: parseInt(process.env.DB_PORT || '5432', 10),
+  ssl: process.env.DB_SSL === 'true' ? { rejectUnauthorized: false } : false,
 };
 
 const pool = new Pool(dbConfig);
