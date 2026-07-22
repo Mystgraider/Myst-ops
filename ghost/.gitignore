@@ -281,10 +281,10 @@ Wigle\ Sample\ Files/
 *.sock
 .dockerignore.local
 
-# Package Lock Files (optional - uncomment to ignore)
-package-lock.json
-frontend/package-lock.json
-backend/package-lock.json
+# Package Lock Files - tracked on purpose: the Dockerfiles run `npm ci`,
+# which requires a committed lockfile to produce reproducible builds.
+# (previously ignored here, which is why Render's backend build failed with
+# no lockfile present at all)
 
 # Keep essential documentation
 !README.md

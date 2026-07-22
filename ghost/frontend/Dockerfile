@@ -24,6 +24,11 @@ RUN if [ -f package-lock.json ]; then npm ci --prefer-offline --no-audit; else n
 COPY . .
 
 # Build the application with production environment
+# CI=false: Render (like most CI platforms) sets CI=true automatically,
+# which makes Create React App treat every ESLint *warning* (unused vars,
+# missing hook deps, etc.) as a fatal build error. None of these are actual
+# compile errors - CI=false restores normal "warn but still build" behavior.
+ENV CI=false
 RUN npm run build
 
 # Stage 2: Serve the application with Nginx
