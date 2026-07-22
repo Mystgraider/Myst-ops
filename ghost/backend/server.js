@@ -10,6 +10,7 @@ const { exec } = require('child_process');
 const util = require('util');
 const session = require('express-session');
 const pgSession = require('connect-pg-simple')(session);
+const bcrypt = require('bcryptjs');
 
 // Add this with the other requires at the top
 let geocodingService;
@@ -1004,6 +1005,55 @@ app.get('/api/system/health', requireAuth, requireAdmin, async (req, res) => {
   }
 });
 
+
+// One-time admin bootstrap endpoint. Exists so the very first admin account
+// can be created without needing shell/SSH access (which Render only offers
+// on paid plans). Fails closed by design:
+//   - completely inert unless SETUP_TOKEN is set as an env var
+//   - refuses once ANY user already exists in the database
+// Once you've created your admin account, you can leave SETUP_TOKEN set
+// (it becomes a no-op) or remove it from your Render env vars - either is fine.
+app.post('/api/setup/create-admin', async (req, res) => {
+  try {
+    if (!process.env.SETUP_TOKEN) {
+      return res.status(404).json({ error: 'Not found' });
+    }
+    const providedToken = req.headers['x-setup-token'];
+    if (!providedToken || providedToken !== process.env.SETUP_TOKEN) {
+      return res.status(404).json({ error: 'Not found' });
+    }
+
+    const existing = await pool.query('SELECT COUNT(*) FROM users');
+    if (parseInt(existing.rows[0].count, 10) > 0) {
+      return res.status(403).json({ error: 'Setup already completed - a user already exists. Use the normal login/password-reset flow instead.' });
+    }
+
+    const { username, password, email, firstName, lastName } = req.body || {};
+    if (!username || !password) {
+      return res.status(400).json({ error: 'username and password are required' });
+    }
+    if (password.length < 12) {
+      return res.status(400).json({ error: 'Password must be at least 12 characters long' });
+    }
+    const knownWeakPasswords = ['admin123', 'changeme', 'password', 'newpassword', 'admin'];
+    if (knownWeakPasswords.includes(password.toLowerCase())) {
+      return res.status(400).json({ error: 'That password is not allowed. Choose a strong, unique password.' });
+    }
+
+    const password_hash = await bcrypt.hash(password, 10);
+    const result = await pool.query(
+      `INSERT INTO users (username, email, password_hash, first_name, last_name, role, is_active)
+       VALUES ($1, $2, $3, $4, $5, 'admin', true)
+       RETURNING id, username, email, first_name, last_name, role`,
+      [username, email || null, password_hash, firstName || 'Admin', lastName || 'User']
+    );
+
+    res.json({ message: 'Admin user created successfully', user: result.rows[0] });
+  } catch (err) {
+    console.error('Error in admin bootstrap:', err);
+    res.status(500).json({ error: 'Internal error creating admin user' });
+  }
+});
 
 const errorHandler = require('./middleware/errorHandler');
 app.use(errorHandler);

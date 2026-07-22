@@ -25,8 +25,10 @@ jobs:
 
       - name: Generate test .env
         run: |
-          printf "DB_PASSWORD=%s\nSESSION_SECRET=%s\nDB_USER=postgres\nDB_NAME=osint_crm_db\nDB_HOST=db\nDB_PORT=5432\nNODE_ENV=production\nPORT=3001\nFRONTEND_URL=http://localhost:8080\n" \
-            "$(openssl rand -base64 24)" "$(openssl rand -base64 32)" > .env
+          printf "DB_PASSWORD=%s\nSESSION_SECRET=%s\nDB_USER=postgres\nDB_NAME=osint_crm_db\nDB_HOST=db\nDB_PORT=5432\nNODE_ENV=production\nPORT=3001\nFRONTEND_URL=http://localhost:8080\nSETUP_TOKEN=%s\n" \
+            "$(openssl rand -base64 24)" "$(openssl rand -base64 32)" "$(openssl rand -hex 16)" > .env
+          # capture the setup token in its own file so later steps can read it
+          grep SETUP_TOKEN .env | cut -d= -f2- > /tmp/setup_token.txt
 
       - name: Build and start stack
         run: docker compose up --build -d
@@ -50,6 +52,38 @@ jobs:
         run: |
           curl -sf http://localhost:8080/api/health || (echo "::error::Frontend could not reach backend through nginx proxy - check BACKEND_HOST templating" && exit 1)
           echo "✅ Frontend successfully proxied /api to backend via BACKEND_HOST"
+
+      - name: Verify admin bootstrap endpoint (fail-closed + success + one-time-only)
+        run: |
+          TOKEN=$(cat /tmp/setup_token.txt)
+
+          echo "--- no token header: should 404 ---"
+          STATUS=$(curl -s -o /dev/null -w "%{http_code}" -X POST http://localhost:3001/api/setup/create-admin \
+            -H "Content-Type: application/json" -d '{"username":"x","password":"whatever12345"}')
+          [ "$STATUS" = "404" ] || (echo "::error::Expected 404 with no token, got $STATUS" && exit 1)
+
+          echo "--- wrong token: should 404 ---"
+          STATUS=$(curl -s -o /dev/null -w "%{http_code}" -X POST http://localhost:3001/api/setup/create-admin \
+            -H "Content-Type: application/json" -H "X-Setup-Token: wrong-token" -d '{"username":"x","password":"whatever12345"}')
+          [ "$STATUS" = "404" ] || (echo "::error::Expected 404 with wrong token, got $STATUS" && exit 1)
+
+          echo "--- correct token, weak password: should 400 ---"
+          STATUS=$(curl -s -o /dev/null -w "%{http_code}" -X POST http://localhost:3001/api/setup/create-admin \
+            -H "Content-Type: application/json" -H "X-Setup-Token: $TOKEN" -d '{"username":"testadmin","password":"admin123"}')
+          [ "$STATUS" = "400" ] || (echo "::error::Expected 400 for weak password, got $STATUS" && exit 1)
+
+          echo "--- correct token, strong password: should succeed ---"
+          RESP=$(curl -s -X POST http://localhost:3001/api/setup/create-admin \
+            -H "Content-Type: application/json" -H "X-Setup-Token: $TOKEN" \
+            -d '{"username":"testadmin","password":"Str0ngTestPassw0rd!"}')
+          echo "$RESP" | grep -q '"role":"admin"' || (echo "::error::Expected successful admin creation, got: $RESP" && exit 1)
+
+          echo "--- second attempt with correct token: should 403 (already exists) ---"
+          STATUS=$(curl -s -o /dev/null -w "%{http_code}" -X POST http://localhost:3001/api/setup/create-admin \
+            -H "Content-Type: application/json" -H "X-Setup-Token: $TOKEN" -d '{"username":"another","password":"Str0ngTestPassw0rd!"}')
+          [ "$STATUS" = "403" ] || (echo "::error::Expected 403 on second attempt, got $STATUS" && exit 1)
+
+          echo "✅ Admin bootstrap endpoint: fail-closed, validates password strength, and is one-time-only"
 
       - name: Show logs on failure
         if: failure()
