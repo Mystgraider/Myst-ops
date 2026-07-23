@@ -5,7 +5,18 @@ audit, source code SAST, live browser-based recon, passive OSINT, and a
 full case-management CRM. Everything runs from the GitHub Actions tab
 (mobile friendly, no PC needed) or deploys straight to Render/Pages.
 
+## Start here
+
+**https://mystgraider.github.io/Myst-ops/** - a landing page (`hub/`) linking
+to all 6 tools below, so you don't have to remember where each one lives.
+
 ## What's here
+
+### `hub/` + `.github/workflows/deploy-pages.yml`
+The landing page above. Just static links - no token, no logic, nothing
+that can be misused if someone else finds the URL (Actions links open
+GitHub's run dialog, which still requires your own write access to
+actually trigger anything).
 
 ### `bogart/` + `.github/workflows/bogart-scan.yml`
 Recon + active vulnerability scanner. Actions tab → **Bogart Recon Scan** →
@@ -22,11 +33,11 @@ automatically whenever `security-analyst/` or `bogart/` changes (it scans
 the whole repo, so it catches `bogart_v6.py` too), or trigger manually from
 the Actions tab. Reports land as a `security-reports-...` artifact.
 
-### `threatscanner/` + `.github/workflows/deploy-threatscanner.yml`
+### `threatscanner/` + `.github/workflows/deploy-pages.yml`
 Browser-based live scanner (headers, CORS, SQLi/XSS indicators, subdomain
 enum, CSRF PoC, brute force, WebSocket fuzz, and a Code Scan tab running
-the same rules as security-analyst, ported to JS). Auto-deploys to GitHub
-Pages whenever `threatscanner/` changes.
+the same rules as security-analyst, ported to JS). Deployed alongside the
+hub at `/threatscanner/`, auto-updates whenever `threatscanner/` changes.
 
 **One-time setup needed:** enable Pages on this repo — Settings → Pages →
 Source → **GitHub Actions** (not "Deploy from a branch"). After that, the

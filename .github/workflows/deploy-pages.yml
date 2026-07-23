@@ -1,9 +1,9 @@
-name: Deploy ThreatScanner to GitHub Pages
+name: Deploy Pages (hub + ThreatScanner)
 
 on:
   push:
     branches: [main]
-    paths: ["threatscanner/**"]
+    paths: ["hub/**", "threatscanner/**"]
   workflow_dispatch:
 
 permissions:
@@ -25,13 +25,22 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
+      - name: Assemble combined site
+        # hub/ becomes the site root, threatscanner/ becomes a subpage at
+        # /threatscanner/ - kept as separate source folders in git (no
+        # duplicated files) and combined only at deploy time.
+        run: |
+          mkdir -p _site/threatscanner
+          cp hub/index.html _site/index.html
+          cp threatscanner/index.html _site/threatscanner/index.html
+
       - name: Setup Pages
         uses: actions/configure-pages@v5
 
-      - name: Upload ThreatScanner as Pages artifact
+      - name: Upload combined site as Pages artifact
         uses: actions/upload-pages-artifact@v3
         with:
-          path: threatscanner
+          path: _site
 
       - name: Deploy to GitHub Pages
         id: deployment

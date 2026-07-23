@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>myst-ops // Control Panel</title>
+<style>
+:root{
+  --bg:#0f172a;--bg2:#1e293b;--bg3:#334155;
+  --text:#e2e8f0;--text2:#94a3b8;--text3:#64748b;
+  --green:#4ade80;--yellow:#fbbf24;--red:#f87171;
+  --blue:#60a5fa;--purple:#a78bfa;--orange:#fb923c;
+  --border:#334155;--card:#1e293b;--input:#0f172a;
+}
+*{box-sizing:border-box;}
+body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(--text);min-height:100vh;font-size:14px;margin:0;}
+.topbar{background:var(--bg2);border-bottom:1px solid var(--border);padding:14px 16px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100}
+.logo{font-size:18px;font-weight:700;color:var(--blue)}
+.logo span{color:var(--text2);font-weight:400;font-size:12px;margin-left:8px}
+.wrap{max-width:760px;margin:0 auto;padding:20px 16px 60px}
+.section-label{font-size:11px;text-transform:uppercase;letter-spacing:0.06em;color:var(--text3);margin:26px 0 10px;padding-left:2px}
+.section-label:first-child{margin-top:4px}
+.grid{display:grid;gap:10px}
+.card{
+  background:var(--card);border:1px solid var(--border);border-radius:8px;
+  padding:14px 16px;display:block;text-decoration:none;color:var(--text);
+  transition:border-color 0.15s, background 0.15s;
+}
+.card:hover{border-color:var(--blue);background:var(--bg3);}
+.card-top{display:flex;align-items:center;justify-content:space-between;gap:10px;}
+.card-title{font-size:14.5px;font-weight:600;display:flex;align-items:center;gap:8px;}
+.dot{width:7px;height:7px;border-radius:50%;flex-shrink:0;}
+.dot.live{background:var(--green);box-shadow:0 0 6px rgba(74,222,128,0.6);}
+.dot.action{background:var(--blue);}
+.arrow{color:var(--text3);font-size:13px;}
+.card-desc{font-size:12.5px;color:var(--text2);margin-top:5px;line-height:1.5;}
+.tag{font-size:10px;padding:2px 7px;border-radius:10px;border:1px solid var(--border);color:var(--text3);white-space:nowrap;}
+.tag.live{color:var(--green);border-color:rgba(74,222,128,0.3);}
+.tag.action{color:var(--blue);border-color:rgba(96,165,250,0.3);}
+.footnote{margin-top:30px;font-size:11.5px;color:var(--text3);line-height:1.6;padding:0 2px;}
+.footnote a{color:var(--text2);}
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="logo">myst-ops <span>// control panel</span></div>
+</div>
+
+<div class="wrap">
+
+  <div class="section-label">Live Tools</div>
+  <div class="grid">
+
+    <a class="card" href="./threatscanner/" >
+      <div class="card-top">
+        <div class="card-title"><span class="dot live"></span>ThreatScanner</div>
+        <span class="tag live">live</span>
+      </div>
+      <div class="card-desc">Browser-based recon: headers, CORS, SQLi/XSS indicators, subdomain enum, CSRF PoC, brute force, WebSocket fuzz, and static code scan.</div>
+    </a>
+
+    <a class="card" href="https://ghost-crm-frontend.onrender.com" target="_blank" rel="noopener">
+      <div class="card-top">
+        <div class="card-title"><span class="dot live"></span>GHOST CRM</div>
+        <span class="tag live">live</span>
+      </div>
+      <div class="card-desc">Case management for OSINT/bug-bounty findings - people, businesses, locations, entity networks. Login required.</div>
+    </a>
+
+  </div>
+
+  <div class="section-label">GitHub Actions</div>
+  <div class="grid">
+
+    <a class="card" href="https://github.com/Mystgraider/Myst-ops/actions/workflows/bogart-scan.yml" target="_blank" rel="noopener">
+      <div class="card-top">
+        <div class="card-title"><span class="dot action"></span>Bogart Recon Scan</div>
+        <span class="tag action">Actions</span>
+      </div>
+      <div class="card-desc">Subdomain enum + active vuln scan (nuclei + afrog) against a target you specify. Downloads a report artifact.</div>
+    </a>
+
+    <a class="card" href="https://github.com/Mystgraider/Myst-ops/actions/workflows/security-analyst-scan.yml" target="_blank" rel="noopener">
+      <div class="card-top">
+        <div class="card-title"><span class="dot action"></span>Security Analyst Scan</div>
+        <span class="tag action">Actions</span>
+      </div>
+      <div class="card-desc">Static source-code scan (regex + AST) across this repo - hardcoded secrets, weak crypto, injection patterns.</div>
+    </a>
+
+    <a class="card" href="https://github.com/Mystgraider/Myst-ops/actions/workflows/openosint.yml" target="_blank" rel="noopener">
+      <div class="card-top">
+        <div class="card-title"><span class="dot action"></span>OpenOSINT Investigation</div>
+        <span class="tag action">Actions</span>
+      </div>
+      <div class="card-desc">Passive OSINT lookups - email, username, DNS, whois. Pick a tool and target from the run dialog.</div>
+    </a>
+
+    <a class="card" href="https://github.com/Mystgraider/Myst-ops/actions/workflows/argo-audit.yml" target="_blank" rel="noopener">
+      <div class="card-top">
+        <div class="card-title"><span class="dot action"></span>Argo Static Audit</div>
+        <span class="tag action">Actions</span>
+      </div>
+      <div class="card-desc">LLM-native code audit. Start with the free "mock" runner before spending anything on a real "headless" run.</div>
+    </a>
+
+  </div>
+
+  <div class="footnote">
+    Actions links open the run dialog on GitHub - you'll need to be signed in
+    with write access to actually trigger a run (this page has no way to
+    trigger anything on its own, on purpose - no token lives here).
+    Source: <a href="https://github.com/Mystgraider/Myst-ops" target="_blank" rel="noopener">github.com/Mystgraider/Myst-ops</a>
+  </div>
+
+</div>
+</body>
+</html>
