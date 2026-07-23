@@ -44,8 +44,10 @@ COPY --from=build /app/build /usr/share/nginx/html
 COPY nginx.conf.template /etc/nginx/templates/default.conf.template
 
 # Default for local docker-compose; override with -e BACKEND_HOST=host:port
-# (or a platform's env var UI) when deploying the two services separately.
+# and -e BACKEND_SCHEME=http|https (or a platform's env var UI) when
+# deploying the two services separately.
 ENV BACKEND_HOST=backend:3001
+ENV BACKEND_SCHEME=http
 
 # Expose port 80
 EXPOSE 80

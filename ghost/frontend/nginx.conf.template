@@ -27,12 +27,20 @@ server {
     }
 
     # Proxy API requests to backend
+    # BACKEND_SCHEME+BACKEND_HOST are separate on purpose: local docker-compose
+    # talks to the backend container over plain http on the private compose
+    # network, while Render needs https over the public internet (free-tier
+    # services can't receive private network traffic). The Host header must
+    # never include a scheme - Render's edge routes by hostname/SNI, and an
+    # unrelated Host value (e.g. passed through from the frontend request)
+    # means it won't know which service to send this to.
     location /api {
-        proxy_pass http://${BACKEND_HOST};
+        proxy_pass ${BACKEND_SCHEME}://${BACKEND_HOST};
+        proxy_ssl_server_name on;
         proxy_http_version 1.1;
         proxy_set_header Upgrade $http_upgrade;
         proxy_set_header Connection 'upgrade';
-        proxy_set_header Host $host;
+        proxy_set_header Host ${BACKEND_HOST};
         proxy_cache_bypass $http_upgrade;
         proxy_set_header X-Real-IP $remote_addr;
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
@@ -41,9 +49,10 @@ server {
 
     # Proxy for uploaded files
     location /public {
-        proxy_pass http://${BACKEND_HOST};
+        proxy_pass ${BACKEND_SCHEME}://${BACKEND_HOST};
+        proxy_ssl_server_name on;
         proxy_http_version 1.1;
-        proxy_set_header Host $host;
+        proxy_set_header Host ${BACKEND_HOST};
         proxy_set_header X-Real-IP $remote_addr;
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
         proxy_set_header X-Forwarded-Proto $scheme;

@@ -47,14 +47,12 @@ services:
     dockerfilePath: ./ghost/frontend/Dockerfile
     plan: free
     envVars:
-      # This is the piece the nginx.conf.template fix enables: BACKEND_HOST
-      # resolves to "ghost-crm-backend-xxxx:3001" on Render's private
-      # network, envsubst bakes it into nginx's config at container start,
-      # and /api requests get proxied there - same mechanism as the local
-      # docker-compose "backend:3001" default, just pointed at Render's
-      # internal hostname instead.
+      # Free-tier web services can't receive private network traffic (Render
+      # platform limit), so this goes over the public internet instead of
+      # Render's private network. ghost-crm-backend.onrender.com is
+      # deterministic from the backend service's name above - same hostname
+      # you already used successfully from Postman to create the admin user.
       - key: BACKEND_HOST
-        fromService:
-          name: ghost-crm-backend
-          type: web
-          property: hostport
+        value: "ghost-crm-backend.onrender.com"
+      - key: BACKEND_SCHEME
+        value: "https"
