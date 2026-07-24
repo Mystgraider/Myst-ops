@@ -28,7 +28,11 @@ Run workflow → fill in target domain, scope allowlist, program name.
 Downloads a markdown report + sqlite findings db as an artifact.
 
 Installs 7 Go-based recon tools + builds massdns from source on every run,
-so expect 5-10 minutes of setup before scanning starts.
+so expect 5-10 minutes of setup before scanning starts. The new
+`bogart/security_intelligence_os/` package starts the longer-term Security
+Intelligence OS foundation: normalized assets/findings/evidence, pipeline
+stages, and plugin extension points documented in
+`docs/SECURITY_INTELLIGENCE_OS.md`.
 
 ### `security-analyst/` + `.github/workflows/security-analyst-scan.yml`
 Static source-code scanner (regex + AST layer) - hardcoded secrets, weak
