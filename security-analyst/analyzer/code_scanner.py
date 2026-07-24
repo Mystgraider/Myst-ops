@@ -15,13 +15,7 @@ from analyzer.vulnerability_detector import (
     deduplicate,
 )
 
-try:
-    import config
-except ImportError:  # allow running scanner as a standalone module
-    class config:  # type: ignore
-        SCANNABLE_EXTENSIONS = {".py"}
-        IGNORE_DIRS = {".git", "__pycache__", "venv", ".venv"}
-        MAX_FILE_SIZE = 2 * 1024 * 1024
+import config
 
 
 def _iter_source_files(root_path: str):
@@ -38,7 +32,7 @@ def _iter_source_files(root_path: str):
 
 
 FILE_DISABLE_MARKER = "# secscan: disable-file"
-LINE_SUPPRESS_MARKER = "# nosec"
+LINE_SUPPRESS_MARKER = "nosec"
 
 
 def scan_file(file_path: str) -> List[Finding]:
@@ -63,8 +57,8 @@ def scan_file(file_path: str) -> List[Finding]:
     findings = run_regex_checks(file_path, source) + run_ast_checks(file_path, source)
     findings = deduplicate(findings)
 
-    # Line-level opt-out: `# nosec` on the same line suppresses that finding,
-    # same convention as tools like bandit.
+    # Line-level opt-out: `nosec` on the same line suppresses that finding,
+    # matching Python `# nosec` and JavaScript/TypeScript `// nosec`.
     lines = source.splitlines()
     findings = [
         f for f in findings

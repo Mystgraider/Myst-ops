@@ -17,14 +17,15 @@ os.makedirs(REPORTS_DIR, exist_ok=True)
 # ==============================
 # SCAN BEHAVIOR
 # ==============================
-# File extensions the scanner will read as source code
-SCANNABLE_EXTENSIONS = {".py"}
+# File extensions the scanner will read as source code. Python receives both
+# regex and AST checks; JavaScript/TypeScript currently receive regex checks.
+SCANNABLE_EXTENSIONS = {".py", ".js", ".jsx", ".ts", ".tsx"}
 
 # Directories to always skip
 IGNORE_DIRS = {
     ".git", "__pycache__", "venv", ".venv", "env",
     "node_modules", ".idea", ".vscode", "output_reports",
-    "site-packages", "dist", "build",
+    "site-packages", "dist", "build", "coverage",
 }
 
 # Max file size to read (bytes) - avoids choking on huge/binary files

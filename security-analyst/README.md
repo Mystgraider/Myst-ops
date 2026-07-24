@@ -1,12 +1,12 @@
 # Security Analyst
 
-A static code review tool: scans Python source for common vulnerability
+A static code review tool: scans Python and JavaScript/TypeScript source for common vulnerability
 patterns (injection, weak crypto, hardcoded secrets, insecure deserialization,
 etc.), then produces both a **vulnerability report** (findings + severity)
 and a **secure coding report** (why it matters + how to fix it).
 
 Two detection layers work together:
-- **Regex rules** — fast, catch obvious patterns anywhere in a line.
+- **Regex rules** — fast, catch obvious patterns anywhere in a line across Python, JavaScript, and TypeScript files.
 - **AST checks** — parse the actual Python syntax tree for higher-confidence,
   structural findings (fewer false positives than regex alone).
 
@@ -48,6 +48,9 @@ Reports land in `output_reports/`. Findings also persist in `findings.db`
 | ASSERT-001 | assert used for auth/security logic | MEDIUM |
 | PATH-001 | Path traversal | MEDIUM |
 | XXE-001 | XML external entity injection | HIGH |
+| JS-INJ-001 | Node.js child_process exec/execSync | CRITICAL |
+| JS-XSS-001 | DOM XSS sinks (innerHTML/outerHTML/document.write) | HIGH |
+| JS-REDIR-001 | Potential open redirects | MEDIUM |
 
 ## Project layout
 
@@ -93,8 +96,8 @@ line if you want to point it at a subfolder instead of the whole repo.
   exploitability. Always review CRITICAL/HIGH findings manually — false
   positives are expected (e.g. `eval()` used only on hardcoded, non-user
   strings still gets flagged).
-- Python-only for now (`SCANNABLE_EXTENSIONS` in `config.py`). The regex
-  layer would need per-language tuning to extend to JS/PHP/etc; the AST
-  layer is Python-specific by design.
+- Python receives both regex and AST coverage. JavaScript/TypeScript receive
+  regex coverage for high-signal client/server anti-patterns; the AST layer is
+  Python-specific by design.
 - Not a replacement for dependency scanning (pip-audit, safety) — this only
   looks at first-party code you point it at.

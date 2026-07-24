@@ -11,6 +11,7 @@ Usage:
 """
 
 import argparse
+import os
 import sys
 
 import config
@@ -46,9 +47,9 @@ def cmd_scan(args):
 
 
 def cmd_demo(args):
-    print("[*] Running demo scan against demo_app/vulnerable_examples.py")
-    print("    (expected: every rule should fire at least once)\n")
-    args.path = "demo_app/vulnerable_examples.py"
+    print("[*] Running demo scan against demo_app/")
+    print("    (expected: bundled Python and JavaScript rules should fire)\n")
+    args.path = os.path.join(os.path.dirname(__file__), "demo_app")
     args.no_db = args.no_db if hasattr(args, "no_db") else False
     cmd_scan(args)
 
