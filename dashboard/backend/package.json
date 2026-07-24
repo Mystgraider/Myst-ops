@@ -1,0 +1,13 @@
+{
+  "name": "myst-ops-dashboard-backend",
+  "version": "1.0.0",
+  "description": "Secure backend proxy for triggering myst-ops GitHub Actions workflows from the dashboard UI - holds the GitHub token server-side, never exposed to the browser.",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "express": "^4.19.2",
+    "cors": "^2.8.5"
+  }
+}

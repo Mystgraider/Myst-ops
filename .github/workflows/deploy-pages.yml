@@ -1,9 +1,9 @@
-name: Deploy Pages (hub + ThreatScanner)
+name: Deploy Pages (hub + ThreatScanner + Dashboard)
 
 on:
   push:
     branches: [main]
-    paths: ["hub/**", "threatscanner/**"]
+    paths: ["hub/**", "threatscanner/**", "dashboard/frontend/**"]
   workflow_dispatch:
 
 permissions:
@@ -26,13 +26,14 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Assemble combined site
-        # hub/ becomes the site root, threatscanner/ becomes a subpage at
-        # /threatscanner/ - kept as separate source folders in git (no
+        # hub/ becomes the site root, threatscanner/ and dashboard/frontend/
+        # become subpages - kept as separate source folders in git (no
         # duplicated files) and combined only at deploy time.
         run: |
-          mkdir -p _site/threatscanner
+          mkdir -p _site/threatscanner _site/dashboard
           cp hub/index.html _site/index.html
           cp threatscanner/index.html _site/threatscanner/index.html
+          cp dashboard/frontend/index.html _site/dashboard/index.html
 
       - name: Setup Pages
         uses: actions/configure-pages@v5

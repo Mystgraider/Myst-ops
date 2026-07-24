@@ -1,0 +1,324 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>myst-ops // Dashboard</title>
+<style>
+:root{
+  --bg:#0f172a;--bg2:#1e293b;--bg3:#334155;
+  --text:#e2e8f0;--text2:#94a3b8;--text3:#64748b;
+  --green:#4ade80;--yellow:#fbbf24;--red:#f87171;
+  --blue:#60a5fa;--purple:#a78bfa;--orange:#fb923c;
+  --border:#334155;--card:#1e293b;--input:#0f172a;
+}
+*{box-sizing:border-box;}
+body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(--text);min-height:100vh;font-size:14px;margin:0;}
+.topbar{background:var(--bg2);border-bottom:1px solid var(--border);padding:10px 16px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100}
+.logo{font-size:17px;font-weight:700;color:var(--blue)}
+.logo span{color:var(--text2);font-weight:400;font-size:12px;margin-left:6px}
+.nav{background:var(--bg2);border-bottom:1px solid var(--border);padding:8px 10px;display:flex;gap:4px;flex-wrap:wrap;position:sticky;top:41px;z-index:99}
+.nav-btn{padding:6px 11px;border-radius:6px;border:1px solid var(--border);background:transparent;color:var(--text2);font-size:12px;cursor:pointer;transition:all 0.15s}
+.nav-btn:hover{background:var(--bg3);color:var(--text)}
+.nav-btn.active{background:rgba(96,165,250,0.15);color:var(--blue);border-color:rgba(96,165,250,0.5)}
+.wrap{max-width:700px;margin:0 auto;padding:16px}
+.card{background:var(--card);border:1px solid var(--border);border-radius:8px;padding:16px;margin-bottom:14px;}
+.card-title{font-size:14px;font-weight:600;margin-bottom:12px;}
+.igroup{margin-bottom:12px;}
+label{display:block;font-size:12px;color:var(--text2);margin-bottom:5px;}
+input[type=text], select, textarea{
+  width:100%;background:var(--input);border:1px solid var(--border);border-radius:6px;
+  color:var(--text);font-size:13px;padding:9px 10px;font-family:inherit;
+}
+input[type=text]:focus, select:focus{outline:none;border-color:var(--blue);}
+.btn{
+  background:var(--blue);color:#0f172a;border:none;border-radius:6px;
+  padding:10px 16px;font-weight:600;font-size:13px;cursor:pointer;width:100%;
+}
+.btn:hover{filter:brightness(1.1);}
+.btn:disabled{background:var(--bg3);color:var(--text3);cursor:not-allowed;}
+.btn-secondary{background:transparent;border:1px solid var(--border);color:var(--text2);width:auto;padding:6px 12px;font-size:12px;}
+.tool-panel{display:none;}
+.tool-panel.active{display:block;}
+.status-line{font-size:12.5px;padding:8px 10px;border-radius:6px;margin-top:10px;}
+.status-line.ok{background:rgba(74,222,128,0.1);color:var(--green);}
+.status-line.err{background:rgba(248,113,113,0.1);color:var(--red);}
+.status-line.info{background:rgba(96,165,250,0.1);color:var(--blue);}
+.runs-list{margin-top:10px;}
+.run-item{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:9px 10px;border-bottom:1px solid var(--border);font-size:12.5px;
+}
+.run-item:last-child{border-bottom:none;}
+.run-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0;margin-right:8px;}
+.run-dot.success{background:var(--green);}
+.run-dot.failure{background:var(--red);}
+.run-dot.in_progress{background:var(--yellow);animation:pulse 1.2s infinite;}
+.run-dot.queued{background:var(--text3);}
+@keyframes pulse{0%,100%{opacity:1;}50%{opacity:0.4;}}
+.run-left{display:flex;align-items:center;flex:1;min-width:0;}
+.run-time{color:var(--text3);flex-shrink:0;margin-left:8px;}
+.run-links{display:flex;gap:6px;margin-top:2px;}
+.run-links a{color:var(--blue);font-size:11px;text-decoration:none;}
+.gate{
+  max-width:340px;margin:80px auto;padding:20px;background:var(--card);
+  border:1px solid var(--border);border-radius:10px;
+}
+.gate h2{font-size:15px;margin:0 0 12px;}
+.dim{color:var(--text3);font-size:11.5px;margin-top:8px;}
+</style>
+</head>
+<body>
+
+<div id="gate" class="gate">
+  <h2>myst-ops dashboard</h2>
+  <div class="igroup">
+    <label>Backend URL</label>
+    <input type="text" id="g-backend" placeholder="https://myst-ops-dashboard.onrender.com">
+  </div>
+  <div class="igroup">
+    <label>Dashboard Token</label>
+    <input type="text" id="g-token" placeholder="your DASHBOARD_TOKEN">
+  </div>
+  <button class="btn" onclick="connect()">Connect</button>
+  <div id="gate-status"></div>
+  <div class="dim">Stored only in this browser's local storage - never sent anywhere except your own backend.</div>
+</div>
+
+<div id="app" style="display:none">
+  <div class="topbar">
+    <div class="logo">myst-ops <span>// dashboard</span></div>
+    <button class="btn-secondary" onclick="disconnect()">Disconnect</button>
+  </div>
+  <div class="nav">
+    <button class="nav-btn active" onclick="showTool('bogart', this)">Bogart</button>
+    <button class="nav-btn" onclick="showTool('openosint', this)">OpenOSINT</button>
+    <button class="nav-btn" onclick="showTool('argo', this)">Argo</button>
+    <button class="nav-btn" onclick="showTool('secan', this)">Security Analyst</button>
+  </div>
+
+  <div class="wrap">
+
+    <!-- BOGART -->
+    <div class="tool-panel active" id="tool-bogart">
+      <div class="card">
+        <div class="card-title">Bogart Recon Scan</div>
+        <div class="igroup">
+          <label>Target domain</label>
+          <input type="text" id="bg-domain" placeholder="stage01.golinks.io">
+        </div>
+        <div class="igroup">
+          <label>Scope allowlist (comma-separated)</label>
+          <input type="text" id="bg-scope" placeholder="stage01.golinks.io">
+        </div>
+        <div class="igroup">
+          <label>Program name (optional)</label>
+          <input type="text" id="bg-program" placeholder="Bug Bounty Program">
+        </div>
+        <button class="btn" onclick="trigger('bogart-scan.yml', {
+          target_domain: val('bg-domain'),
+          scope_allowlist: val('bg-scope'),
+          program_name: val('bg-program') || 'Bug Bounty Program'
+        }, 'bogart-status')">Run Scan</button>
+        <div id="bogart-status"></div>
+      </div>
+      <div class="card">
+        <div class="card-title">Recent runs</div>
+        <div class="runs-list" id="bogart-runs"><span class="dim">Loading...</span></div>
+      </div>
+    </div>
+
+    <!-- OPENOSINT -->
+    <div class="tool-panel" id="tool-openosint">
+      <div class="card">
+        <div class="card-title">OpenOSINT Investigation</div>
+        <div class="igroup">
+          <label>Tool</label>
+          <select id="oo-tool">
+            <option value="playbook-domain">playbook-domain (whois+subdomains+dns, no key)</option>
+            <option value="email">email (no key)</option>
+            <option value="username">username (no key)</option>
+            <option value="dns">dns (no key)</option>
+            <option value="shodan">shodan (needs key)</option>
+            <option value="virustotal">virustotal (needs key)</option>
+            <option value="censys">censys (needs key)</option>
+            <option value="github">github (needs key)</option>
+            <option value="abuseipdb">abuseipdb (needs key)</option>
+            <option value="ip2location">ip2location (needs key)</option>
+          </select>
+        </div>
+        <div class="igroup">
+          <label>Target</label>
+          <input type="text" id="oo-target" placeholder="stage01.golinks.io">
+        </div>
+        <button class="btn" onclick="trigger('openosint.yml', {
+          tool: val('oo-tool'),
+          target: val('oo-target')
+        }, 'openosint-status')">Run Investigation</button>
+        <div id="openosint-status"></div>
+      </div>
+      <div class="card">
+        <div class="card-title">Recent runs</div>
+        <div class="runs-list" id="openosint-runs"><span class="dim">Loading...</span></div>
+      </div>
+    </div>
+
+    <!-- ARGO -->
+    <div class="tool-panel" id="tool-argo">
+      <div class="card">
+        <div class="card-title">Argo Static Audit</div>
+        <div class="igroup">
+          <label>Repo path</label>
+          <input type="text" id="ar-path" value=".">
+        </div>
+        <div class="igroup">
+          <label>Runner</label>
+          <select id="ar-runner">
+            <option value="mock">mock (free, fixtures)</option>
+            <option value="headless">headless (real audit, costs tokens)</option>
+          </select>
+        </div>
+        <button class="btn" onclick="trigger('argo-audit.yml', {
+          repo_path: val('ar-path') || '.',
+          runner: val('ar-runner')
+        }, 'argo-status')">Run Audit</button>
+        <div id="argo-status"></div>
+      </div>
+      <div class="card">
+        <div class="card-title">Recent runs</div>
+        <div class="runs-list" id="argo-runs"><span class="dim">Loading...</span></div>
+      </div>
+    </div>
+
+    <!-- SECURITY ANALYST -->
+    <div class="tool-panel" id="tool-secan">
+      <div class="card">
+        <div class="card-title">Security Analyst Scan</div>
+        <div class="dim" style="margin-bottom:12px">Scans the whole repo (catches bogart_v6.py too). No inputs needed.</div>
+        <button class="btn" onclick="trigger('security-analyst-scan.yml', {}, 'secan-status')">Run Scan</button>
+        <div id="secan-status"></div>
+      </div>
+      <div class="card">
+        <div class="card-title">Recent runs</div>
+        <div class="runs-list" id="secan-runs"><span class="dim">Loading...</span></div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+let BACKEND = '';
+let TOKEN = '';
+
+function val(id){ return document.getElementById(id).value.trim(); }
+
+function connect(){
+  BACKEND = document.getElementById('g-backend').value.trim().replace(/\/$/, '');
+  TOKEN = document.getElementById('g-token').value.trim();
+  if (!BACKEND || !TOKEN){
+    document.getElementById('gate-status').innerHTML = '<div class="status-line err">Both fields required.</div>';
+    return;
+  }
+  localStorage.setItem('myst_ops_backend', BACKEND);
+  localStorage.setItem('myst_ops_token', TOKEN);
+  document.getElementById('gate').style.display = 'none';
+  document.getElementById('app').style.display = 'block';
+  refreshAllRuns();
+}
+
+function disconnect(){
+  localStorage.removeItem('myst_ops_backend');
+  localStorage.removeItem('myst_ops_token');
+  location.reload();
+}
+
+function showTool(name, btn){
+  document.querySelectorAll('.tool-panel').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('tool-' + name).classList.add('active');
+  btn.classList.add('active');
+}
+
+async function apiCall(path, opts){
+  opts = opts || {};
+  opts.headers = Object.assign({'X-Dashboard-Token': TOKEN, 'Content-Type': 'application/json'}, opts.headers || {});
+  const res = await fetch(BACKEND + path, opts);
+  const data = await res.json().catch(() => ({}));
+  return { ok: res.ok, status: res.status, data };
+}
+
+async function trigger(workflow, inputs, statusId){
+  const el = document.getElementById(statusId);
+  el.innerHTML = '<div class="status-line info">Triggering...</div>';
+  const { ok, data } = await apiCall('/api/trigger/' + workflow, {
+    method: 'POST',
+    body: JSON.stringify({ inputs })
+  });
+  if (ok){
+    el.innerHTML = '<div class="status-line ok">Triggered - check Recent runs below in a few seconds.</div>';
+    setTimeout(() => refreshRuns(workflow), 4000);
+  } else {
+    el.innerHTML = '<div class="status-line err">Error: ' + (data.error || 'unknown') + (data.detail ? ' - ' + data.detail : '') + '</div>';
+  }
+}
+
+const WORKFLOW_TO_LIST = {
+  'bogart-scan.yml': 'bogart-runs',
+  'openosint.yml': 'openosint-runs',
+  'argo-audit.yml': 'argo-runs',
+  'security-analyst-scan.yml': 'secan-runs',
+};
+
+function timeAgo(iso){
+  const diff = Math.floor((Date.now() - new Date(iso).getTime()) / 1000);
+  if (diff < 60) return diff + 's ago';
+  if (diff < 3600) return Math.floor(diff/60) + 'm ago';
+  if (diff < 86400) return Math.floor(diff/3600) + 'h ago';
+  return Math.floor(diff/86400) + 'd ago';
+}
+
+async function refreshRuns(workflow){
+  const listId = WORKFLOW_TO_LIST[workflow];
+  const el = document.getElementById(listId);
+  const { ok, data } = await apiCall('/api/runs/' + workflow);
+  if (!ok || !data.runs){
+    el.innerHTML = '<span class="dim">Could not load runs' + (data.error ? ': ' + data.error : '') + '</span>';
+    return;
+  }
+  if (data.runs.length === 0){
+    el.innerHTML = '<span class="dim">No runs yet.</span>';
+    return;
+  }
+  el.innerHTML = data.runs.map(r => `
+    <div class="run-item">
+      <div class="run-left">
+        <span class="run-dot ${r.conclusion || r.status}"></span>
+        <span>${r.conclusion || r.status}</span>
+      </div>
+      <div style="text-align:right">
+        <div class="run-time">${timeAgo(r.created_at)}</div>
+        <div class="run-links"><a href="${r.html_url}" target="_blank" rel="noopener">view on GitHub →</a></div>
+      </div>
+    </div>
+  `).join('');
+}
+
+function refreshAllRuns(){
+  Object.keys(WORKFLOW_TO_LIST).forEach(refreshRuns);
+}
+
+// auto-reconnect if already configured in this browser
+window.addEventListener('load', () => {
+  const b = localStorage.getItem('myst_ops_backend');
+  const t = localStorage.getItem('myst_ops_token');
+  if (b && t){
+    document.getElementById('g-backend').value = b;
+    document.getElementById('g-token').value = t;
+    connect();
+  }
+});
+</script>
+
+</body>
+</html>

@@ -56,3 +56,22 @@ services:
         value: "ghost-crm-backend.onrender.com"
       - key: BACKEND_SCHEME
         value: "https"
+
+  # Dashboard backend: proxies workflow triggers to GitHub Actions so the
+  # dashboard UI (hub/../dashboard/) never needs a GitHub token client-side.
+  - type: web
+    name: myst-ops-dashboard-backend
+    runtime: docker
+    dockerContext: ./dashboard/backend
+    dockerfilePath: ./dashboard/backend/Dockerfile
+    plan: free
+    healthCheckPath: /api/health
+    envVars:
+      - key: REPO_OWNER
+        value: "Mystgraider"
+      - key: REPO_NAME
+        value: "Myst-ops"
+      - key: GH_TOKEN
+        sync: false   # a fine-grained PAT scoped to THIS repo only, with Actions: Read and write + Contents: Read permissions - nothing broader
+      - key: DASHBOARD_TOKEN
+        generateValue: true  # Render generates this - copy it from the Environment tab into the dashboard UI's "Dashboard Token" field

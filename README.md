@@ -10,6 +10,10 @@ full case-management CRM. Everything runs from the GitHub Actions tab
 **https://mystgraider.github.io/Myst-ops/** - a landing page (`hub/`) linking
 to all 6 tools below, so you don't have to remember where each one lives.
 
+For triggering bogart/OpenOSINT/Argo/security-analyst without fighting
+GitHub's mobile Actions UI, use **`/dashboard/`** from that hub - one UI
+with a form per tool. See `DEPLOY-DASHBOARD.md` for one-time setup.
+
 ## What's here
 
 ### `hub/` + `.github/workflows/deploy-pages.yml`
