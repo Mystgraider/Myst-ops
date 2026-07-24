@@ -15,10 +15,15 @@ class SecurityIntelligenceOSTests(unittest.TestCase):
     def test_normalize_asset_accepts_discovery_records(self):
         asset = normalize_asset({"domain": "api.example.com", "source": "dns", "status": 200})
 
-        self.assertEqual(asset.asset_type, "unknown")
+        self.assertEqual(asset.asset_type, "domain")
         self.assertEqual(asset.value, "api.example.com")
         self.assertEqual(asset.source, "dns")
         self.assertEqual(asset.attributes["status"], 200)
+
+    def test_normalize_asset_infers_common_asset_types(self):
+        self.assertEqual(normalize_asset({"ip": "192.0.2.10"}).asset_type, "ip")
+        self.assertEqual(normalize_asset({"url": "https://api.example.com/v1"}).asset_type, "url")
+        self.assertEqual(normalize_asset({"value": "cdn.example.com"}).asset_type, "domain")
 
     def test_normalize_finding_clamps_confidence_and_evidence(self):
         finding = normalize_finding(
@@ -37,6 +42,21 @@ class SecurityIntelligenceOSTests(unittest.TestCase):
         self.assertEqual(finding.confidence, 1.0)
         self.assertEqual(finding.asset.asset_type, "website")
         self.assertEqual(finding.evidence[0].evidence_type, "headers")
+
+    def test_normalize_finding_handles_bad_confidence_and_evidence_items(self):
+        finding = normalize_finding(
+            {
+                "title": "Weak signal",
+                "severity": "unexpected",
+                "domain": "example.com",
+                "confidence": "not-a-number",
+                "evidence": ["raw-string-evidence"],
+            }
+        )
+
+        self.assertEqual(finding.severity, "INFO")
+        self.assertEqual(finding.confidence, 0.5)
+        self.assertEqual(finding.evidence[0].evidence_type, "generic")
 
     def test_default_pipeline_order_matches_architecture(self):
         stages = [step.stage for step in build_default_pipeline()]
