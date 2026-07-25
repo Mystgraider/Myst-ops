@@ -55,6 +55,11 @@ textarea{resize:vertical;min-height:70px}
 .ok{color:#4ade80}.warn{color:#fbbf24}.err{color:#f87171}
 .info{color:#60a5fa}.purple{color:#a78bfa}.orange{color:#fb923c}
 .dim{color:#475569}.white{color:#e2e8f0}
+.explain-block{background:#0d1526;border-left:3px solid var(--orange);border-radius:4px;padding:8px 10px;margin:3px 0 10px 0;font-family:'Segoe UI',system-ui,sans-serif;font-size:11.5px;line-height:1.6;color:var(--text2)}
+.ex-row{margin-bottom:3px}
+.ex-row:last-child{margin-bottom:0}
+.ex-label{color:var(--orange);font-weight:600;margin-right:4px}
+.ex-learn{margin-top:5px;padding-top:5px;border-top:1px solid var(--border);color:var(--text3);font-style:italic}
 .sep{color:#1e3a5f}
 /* RISK BADGES */
 .risk{display:inline-block;padding:1px 7px;border-radius:4px;font-size:10px;font-weight:700;margin-left:6px;vertical-align:middle}
@@ -503,6 +508,203 @@ function prog(id,pct){
   if(pct>0){p.classList.add('show');}else{p.classList.remove('show');}
   b.style.width=pct+'%';
 }
+
+// ══════════════════════════════════════════
+// EXPLANATION KNOWLEDGE BASE
+// For each real finding: what it is, how it happens, what an attacker
+// could actually do with it, how to fix it, and what to check next.
+// Rendered inline right under the finding - no separate report needed.
+// ══════════════════════════════════════════
+const EXPLAIN_KB={
+  http_not_https:{
+    what:'The site is served over plain HTTP instead of HTTPS - traffic between the browser and server is not encrypted.',
+    root:'No TLS certificate installed, or the server isn\'t configured to redirect HTTP to HTTPS.',
+    impact:'Anyone on the same network (public wifi, a compromised router, an ISP) can read or modify traffic in transit - login credentials, session cookies, and page content are all exposed.',
+    fix:'Install a TLS certificate (Let\'s Encrypt is free) and force a redirect from HTTP to HTTPS at the server/load-balancer level.',
+    next:'Once HTTPS is in place, re-check HSTS is also set - otherwise a stripped link can still downgrade the very first visit.',
+    learn:'Learn more: OWASP Transport Layer Protection Cheat Sheet.'
+  },
+  hsts_missing:{
+    what:'The Strict-Transport-Security header tells browsers to only ever connect over HTTPS, even if a link points to http://.',
+    root:'The header was never added to the server/framework config, or was removed during a proxy/CDN migration.',
+    impact:'A user\'s first visit (or any http:// link to the site) can be silently downgraded and intercepted before HTTPS ever kicks in (SSL stripping).',
+    fix:'Add: Strict-Transport-Security: max-age=31536000; includeSubDomains',
+    next:'Consider submitting the domain to the HSTS preload list once this is stable.',
+    learn:'Learn more: MDN Strict-Transport-Security.'
+  },
+  csp_missing:{
+    what:'Content-Security-Policy tells the browser which sources of scripts, styles, and other resources are allowed to load.',
+    root:'CSP is opt-in and easy to skip since the site "works fine" without it - it only becomes relevant once something tries to inject a script.',
+    impact:'If any other vulnerability lets an attacker inject a <script> tag (stored/reflected XSS), CSP would have been the last line of defense stopping it from actually running.',
+    fix:'Start with a report-only policy to see what would break, then enforce: Content-Security-Policy: default-src \'self\'',
+    next:'Pair this with the XSS Probe check below - CSP matters most exactly where XSS is found.',
+    learn:'Learn more: OWASP CSP Cheat Sheet.'
+  },
+  xfo_missing:{
+    what:'X-Frame-Options (or a CSP frame-ancestors directive) controls whether this page can be embedded in an <iframe> on another site.',
+    root:'Never configured, or an older framework default that predates clickjacking defenses.',
+    impact:'An attacker can embed this page invisibly inside their own site and trick users into clicking real buttons (transfer funds, change settings) while seeing different, decoy content (clickjacking).',
+    fix:'Add: X-Frame-Options: DENY (or SAMEORIGIN if legitimate framing is needed)',
+    next:'If this is an admin panel or anything with state-changing actions, prioritize this fix over lower-severity findings.',
+    learn:'Learn more: OWASP Clickjacking Defense Cheat Sheet.'
+  },
+  xcto_missing:{
+    what:'X-Content-Type-Options: nosniff stops the browser from guessing ("sniffing") a file\'s type instead of trusting the declared Content-Type.',
+    root:'Rarely configured explicitly - most frameworks don\'t set it by default.',
+    impact:'Lower severity on its own, but has historically combined with upload features to let an attacker-uploaded file (e.g. disguised as an image) get executed as script by the browser.',
+    fix:'Add: X-Content-Type-Options: nosniff',
+    next:'If the site has file upload functionality, that\'s the more important thing to test directly next.',
+    learn:''
+  },
+  referrer_missing:{
+    what:'Referrer-Policy controls how much of this page\'s URL gets sent to other sites when a user clicks an outbound link.',
+    root:'Left at the browser default, which is more permissive than most sites intend.',
+    impact:'If URLs on this site contain sensitive data in the path or query string (tokens, search terms, internal IDs), that data can leak to third-party sites via the Referer header.',
+    fix:'Add: Referrer-Policy: strict-origin-when-cross-origin (a safe, widely-compatible default)',
+    next:'Check whether any URLs on the site put session tokens or PII directly in the query string - that\'s the actual data at risk here.',
+    learn:''
+  },
+  permissions_missing:{
+    what:'Permissions-Policy restricts which browser features (camera, microphone, geolocation, etc.) this page and anything it embeds can access.',
+    root:'A newer header - many sites simply haven\'t added it yet.',
+    impact:'Low on its own; mainly relevant if the site embeds third-party iframes/ads that could otherwise request camera/mic/location access unexpectedly.',
+    fix:'Add a policy disabling features the site doesn\'t use, e.g.: Permissions-Policy: camera=(), microphone=(), geolocation=()',
+    next:'Not urgent - revisit after higher-severity findings are resolved.',
+    learn:''
+  },
+  coop_missing:{
+    what:'Cross-Origin-Opener-Policy isolates this page\'s browsing context from cross-origin popups/windows it opens.',
+    root:'A newer, defense-in-depth header most sites haven\'t adopted yet.',
+    impact:'Without it, a malicious popup this page opens (or that opens it) can potentially retain a reference and manipulate its window object.',
+    fix:'Add: Cross-Origin-Opener-Policy: same-origin',
+    next:'Low priority unless the site opens/is opened by untrusted third-party windows.',
+    learn:''
+  },
+  corp_missing:{
+    what:'Cross-Origin-Resource-Policy controls whether other sites can load this site\'s resources (images, scripts) directly.',
+    root:'A newer, defense-in-depth header most sites haven\'t adopted yet.',
+    impact:'Without it, other sites can embed this site\'s resources directly, which can enable side-channel attacks in specific browser scenarios.',
+    fix:'Add: Cross-Origin-Resource-Policy: same-site (or same-origin if nothing else needs it)',
+    next:'Low priority - revisit after higher-severity findings.',
+    learn:''
+  },
+  server_exposed:{
+    what:'The Server response header reveals the exact web server software and often its version number.',
+    root:'Default behavior of most web servers (nginx, Apache, IIS) unless explicitly configured to hide it.',
+    impact:'An attacker can look up known CVEs for that exact server version and go straight to testing known exploits, instead of having to guess.',
+    fix:'Configure the server to suppress or genericize this header (e.g. nginx: server_tokens off;).',
+    next:'If a specific version was exposed, search for known CVEs against that exact version - that tells you if this is urgent or cosmetic.',
+    learn:''
+  },
+  xpoweredby_exposed:{
+    what:'X-Powered-By reveals the backend framework (Express, PHP, ASP.NET) and sometimes its version.',
+    root:'Enabled by default in many frameworks (e.g. Express.js sets this automatically).',
+    impact:'Same as Server header exposure - narrows down which known vulnerabilities to try first.',
+    fix:'Disable it in framework config (Express: app.disable(\'x-powered-by\')).',
+    next:'Cross-reference the exposed framework/version against public CVE databases.',
+    learn:''
+  },
+  cookie_httponly_missing:{
+    what:'HttpOnly prevents JavaScript from reading a cookie\'s value via document.cookie.',
+    root:'Cookie set without the HttpOnly flag - common when a cookie is intentionally read by client-side JS for some other cookie, and the flag gets left off everything.',
+    impact:'If ANY XSS vulnerability exists anywhere on the site, an attacker\'s injected script can read this cookie directly and steal the session - this is usually how XSS becomes full account takeover.',
+    fix:'Add the HttpOnly flag when setting this cookie server-side.',
+    next:'This finding matters most in combination with the XSS Probe check - if XSS is also found, this becomes critical, not just a warning.',
+    learn:''
+  },
+  cookie_secure_missing:{
+    what:'The Secure flag ensures a cookie is only ever sent over HTTPS connections, never plain HTTP.',
+    root:'Cookie set without the Secure flag - easy to miss if the site was originally HTTP-only or mixed HTTP/HTTPS.',
+    impact:'If any page or resource on the same domain is ever loaded over HTTP (even accidentally, or via an old link), this cookie gets sent unencrypted and can be intercepted.',
+    fix:'Add the Secure flag when setting this cookie.',
+    next:'Confirm HTTPS is enforced everywhere (see the HTTPS/TLS check above) - Secure only helps if HTTP is actually blocked.',
+    learn:''
+  },
+  cookie_samesite_missing:{
+    what:'SameSite controls whether this cookie gets sent along with requests originating from other sites.',
+    root:'Not set, or set to None - older applications predate this protection, or it was disabled to support cross-site embedding.',
+    impact:'Enables Cross-Site Request Forgery (CSRF): a malicious site can trigger state-changing requests (change email, transfer funds) that ride along with this cookie as if the real user made them.',
+    fix:'Set SameSite=Lax for most cookies, or SameSite=Strict for highly sensitive ones (banking, admin panels).',
+    next:'Check the CSRF tab in this tool against any forms/state-changing endpoints on this site.',
+    learn:''
+  },
+  cors_wildcard:{
+    what:'Access-Control-Allow-Origin: * lets ANY website read responses from this endpoint via JavaScript.',
+    root:'Set broadly during development to avoid CORS errors, then never narrowed for production.',
+    impact:'If this endpoint returns anything user-specific (not just public data), any malicious site a victim visits can silently read it in the background.',
+    fix:'Replace the wildcard with an explicit allowlist of trusted origins.',
+    next:'Check whether this specific endpoint returns public data only, or anything user/session-specific - that determines real severity.',
+    learn:''
+  },
+  cors_reflected:{
+    what:'The server reflects whatever Origin header it receives back as Access-Control-Allow-Origin, instead of checking it against an allowlist.',
+    root:'A common but incorrect pattern: code that does res.header(\'Access-Control-Allow-Origin\', req.headers.origin) unconditionally.',
+    impact:'Functionally equivalent to a wildcard for this specific check - any site can request as this origin and get itself allowed. Combined with credentials, this is critical (see below).',
+    fix:'Validate the Origin header against an explicit allowlist before reflecting it back.',
+    next:'Check whether Access-Control-Allow-Credentials is also true (the next line) - that combination is the dangerous one.',
+    learn:''
+  },
+  cors_credentials_critical:{
+    what:'This endpoint reflects any origin AND allows credentials (cookies/auth headers) to be included in cross-origin requests.',
+    root:'Same reflected-origin bug as above, but with credentials:true also enabled - usually because an internal API needed authenticated cross-origin calls and this was the fastest way to make it work.',
+    impact:'A malicious site can make an authenticated request to this endpoint using the victim\'s existing session, read the response, and exfiltrate whatever data or actions that session has access to - full session hijacking, no phishing required.',
+    fix:'Never combine reflected/wildcard origins with credentials:true. Use a strict origin allowlist if credentialed cross-origin requests are genuinely needed.',
+    next:'Treat this as urgent - test what data/actions are actually reachable through this specific endpoint while authenticated.',
+    learn:''
+  },
+  sqli_detected:{
+    what:'A database error message was triggered by injecting SQL syntax into a request parameter - a strong signal the input reaches a SQL query unsanitized.',
+    root:'User input is concatenated directly into a SQL query string instead of using parameterized queries/prepared statements.',
+    impact:'Depending on DB permissions, this can allow reading any data in the database (including other users\' data), bypassing login, or in some configurations writing/deleting data or reading server files.',
+    fix:'Rewrite the query using parameterized statements (e.g. cursor.execute("...WHERE id=?", (val,))) - never string-format or concatenate user input into SQL.',
+    next:'Do not attempt to manually extract data as proof - the error message itself is sufficient evidence. Report immediately if this is a live/production target.',
+    learn:'Learn more: OWASP SQL Injection Prevention Cheat Sheet.'
+  },
+  xss_reflected:{
+    what:'A script payload sent as a request parameter came back unencoded in the page - meaning it would execute as real JavaScript in a victim\'s browser.',
+    root:'User input is rendered into the HTML response without HTML-encoding it first.',
+    impact:'An attacker crafts a link containing this payload and sends it to a victim; when clicked, arbitrary JavaScript runs in the victim\'s session - can steal cookies (see HttpOnly check above), perform actions as the victim, or redirect to a phishing page.',
+    fix:'HTML-encode all user input before rendering it into a page. Add a Content-Security-Policy as defense in depth.',
+    next:'Check the HttpOnly cookie flag above - if that\'s also missing, this XSS can directly steal the session cookie, which is the more severe combined finding.',
+    learn:'Learn more: OWASP XSS Prevention Cheat Sheet.'
+  },
+  port_dangerous:{
+    what:'A service that\'s normally meant for internal/trusted-network use only ({x}) is reachable directly from the internet.',
+    root:'A firewall rule was never configured, or the service was bound to 0.0.0.0 (all interfaces) instead of localhost/an internal IP.',
+    impact:'Depending on the service, this can mean an unauthenticated attacker can directly query or administer it - a database (read/write all data), Docker\'s API (container escape to full host access), or a remote shell service (SSH/Telnet) becomes a brute-force target.',
+    fix:'Firewall this port to only allow trusted internal IPs, or bind the service to localhost/an internal network interface instead of all interfaces.',
+    next:'Confirm whether the service requires authentication at all - an open port with no auth is far more urgent than one that at least prompts for credentials.',
+    learn:''
+  },
+  sensitive_file:{
+    what:'A file or path that should not be publicly accessible ({x}) returned a successful response.',
+    root:'The file was left inside the web-served directory (not excluded via .gitignore/deploy config), or a backup/debug tool was never removed after use.',
+    impact:'Depending on which file: database credentials (.env), full source code (.git), or direct database/admin access - severity varies widely by which specific file was found.',
+    fix:'Remove the file from the publicly-served directory, or configure the web server to block access to dotfiles and known sensitive paths.',
+    next:'If a config or .env file was exposed, treat any credentials inside it as compromised and rotate them - don\'t just remove the file.',
+    learn:''
+  },
+};
+
+function Lexplain(id, key, extra){
+  const kb = EXPLAIN_KB[key];
+  if(!kb) return;
+  const el = document.getElementById(id);
+  const fill = (txt) => extra ? txt.replace('{x}', extra) : txt;
+  const what = fill(kb.what);
+  const impact = fill(kb.impact);
+  const d = document.createElement('div');
+  d.className = 'explain-block';
+  d.innerHTML =
+    '<div class="ex-row"><span class="ex-label">What:</span>'+what+'</div>'+
+    '<div class="ex-row"><span class="ex-label">Root cause:</span>'+kb.root+'</div>'+
+    '<div class="ex-row"><span class="ex-label">If exploited:</span>'+impact+'</div>'+
+    '<div class="ex-row"><span class="ex-label">Fix:</span>'+kb.fix+'</div>'+
+    '<div class="ex-row"><span class="ex-label">Next scan:</span>'+kb.next+'</div>'+
+    (kb.learn ? '<div class="ex-learn">'+kb.learn+'</div>' : '');
+  el.appendChild(d);
+  el.scrollTop = el.scrollHeight;
+}
 function save(id,name){
   const el=document.getElementById(id);
   const txt=el.innerText;
@@ -565,6 +767,7 @@ async function runScan(){
     }else{
       Lrisk('s-out','🚨 HTTP: Plain text — all data can be intercepted by MITM!','HIGH','err');
       L('s-out','   → FIX: Install SSL/TLS certificate and redirect HTTP to HTTPS','warn');
+      Lexplain('s-out','http_not_https');
     }
     // Check HSTS
     try{
@@ -575,6 +778,7 @@ async function runScan(){
       }else{
         Lrisk('s-out','⚠️ HSTS: Missing — browser may not enforce HTTPS','MEDIUM','warn');
         L('s-out','   → FIX: Add header: Strict-Transport-Security: max-age=31536000; includeSubDomains','dim');
+        Lexplain('s-out','hsts_missing');
       }
     }catch(e){}
     SEP('s-out');
@@ -587,22 +791,23 @@ async function runScan(){
     try{
       const r=await req(url);
       const checks=[
-        ['content-security-policy','CSP','Prevents XSS and data injection','MEDIUM'],
-        ['x-frame-options','X-Frame-Options','Prevents clickjacking attacks','MEDIUM'],
-        ['x-content-type-options','X-Content-Type-Options','Prevents MIME type sniffing','LOW'],
-        ['strict-transport-security','HSTS','Forces HTTPS connections','MEDIUM'],
-        ['referrer-policy','Referrer-Policy','Controls referrer information leakage','LOW'],
-        ['permissions-policy','Permissions-Policy','Restricts browser feature access','LOW'],
-        ['cross-origin-opener-policy','COOP','Isolates browsing context','LOW'],
-        ['cross-origin-resource-policy','CORP','Restricts cross-origin reads','LOW'],
+        ['content-security-policy','CSP','Prevents XSS and data injection','MEDIUM','csp_missing'],
+        ['x-frame-options','X-Frame-Options','Prevents clickjacking attacks','MEDIUM','xfo_missing'],
+        ['x-content-type-options','X-Content-Type-Options','Prevents MIME type sniffing','LOW','xcto_missing'],
+        ['strict-transport-security','HSTS','Forces HTTPS connections','MEDIUM','hsts_missing'],
+        ['referrer-policy','Referrer-Policy','Controls referrer information leakage','LOW','referrer_missing'],
+        ['permissions-policy','Permissions-Policy','Restricts browser feature access','LOW','permissions_missing'],
+        ['cross-origin-opener-policy','COOP','Isolates browsing context','LOW','coop_missing'],
+        ['cross-origin-resource-policy','CORP','Restricts cross-origin reads','LOW','corp_missing'],
       ];
-      for(const[hdr,name,desc,lvl]of checks){
+      for(const[hdr,name,desc,lvl,explainKey]of checks){
         const val=r.headers.get(hdr);
         if(val){
           Lrisk('s-out','✅ '+name+': '+val.substring(0,80)+(val.length>80?'...':''),'LOW','ok');
         }else{
           Lrisk('s-out','⚠️ '+name+' MISSING — '+desc,''+lvl,'warn');
           L('s-out','   → FIX: Add response header: '+hdr,'dim');
+          Lexplain('s-out',explainKey);
         }
       }
       // Server header leakage
@@ -610,6 +815,7 @@ async function runScan(){
       if(srv){
         Lrisk('s-out','⚠️ Server header exposed: '+srv+' (reveals server info to attackers)','MEDIUM','warn');
         L('s-out','   → FIX: Configure server to hide/remove Server header','dim');
+        Lexplain('s-out','server_exposed');
       }else{
         Lrisk('s-out','✅ Server header: Hidden','LOW','ok');
       }
@@ -617,6 +823,7 @@ async function runScan(){
       if(xpb){
         Lrisk('s-out','⚠️ X-Powered-By exposed: '+xpb,'MEDIUM','warn');
         L('s-out','   → FIX: Remove X-Powered-By header from server config','dim');
+        Lexplain('s-out','xpoweredby_exposed');
       }
     }catch(e){L('s-out','⚠️ Headers check failed: '+e.message,'warn');}
     SEP('s-out');
@@ -644,13 +851,13 @@ async function runScan(){
           const ssNone=lo.includes('samesite=none');
           const hasSS=ssStrict||ssLax||ssNone;
           if(ho){Lrisk('s-out','  ✅ HttpOnly: Yes — XSS cannot steal this cookie','LOW','ok');}
-          else{Lrisk('s-out','  🚨 HttpOnly: MISSING — cookie accessible via JavaScript (XSS risk)','HIGH','err');L('s-out','     → FIX: Add HttpOnly flag to Set-Cookie header','dim');}
+          else{Lrisk('s-out','  🚨 HttpOnly: MISSING — cookie accessible via JavaScript (XSS risk)','HIGH','err');L('s-out','     → FIX: Add HttpOnly flag to Set-Cookie header','dim');Lexplain('s-out','cookie_httponly_missing');}
           if(sec){Lrisk('s-out','  ✅ Secure: Yes — only sent over HTTPS','LOW','ok');}
-          else{Lrisk('s-out','  ⚠️ Secure: MISSING — cookie sent over HTTP too','MEDIUM','warn');L('s-out','     → FIX: Add Secure flag to Set-Cookie header','dim');}
+          else{Lrisk('s-out','  ⚠️ Secure: MISSING — cookie sent over HTTP too','MEDIUM','warn');L('s-out','     → FIX: Add Secure flag to Set-Cookie header','dim');Lexplain('s-out','cookie_secure_missing');}
           if(ssStrict){Lrisk('s-out','  ✅ SameSite: Strict — best CSRF protection','LOW','ok');}
           else if(ssLax){Lrisk('s-out','  ⚠️ SameSite: Lax — partial CSRF protection','LOW','warn');}
-          else if(ssNone){Lrisk('s-out','  🚨 SameSite: None — sent on ALL cross-site requests (CSRF risk)','HIGH','err');}
-          else{Lrisk('s-out','  🚨 SameSite: NOT SET — vulnerable to CSRF attacks','HIGH','err');L('s-out','     → FIX: Add SameSite=Strict or SameSite=Lax to cookie','dim');}
+          else if(ssNone){Lrisk('s-out','  🚨 SameSite: None — sent on ALL cross-site requests (CSRF risk)','HIGH','err');Lexplain('s-out','cookie_samesite_missing');}
+          else{Lrisk('s-out','  🚨 SameSite: NOT SET — vulnerable to CSRF attacks','HIGH','err');L('s-out','     → FIX: Add SameSite=Strict or SameSite=Lax to cookie','dim');Lexplain('s-out','cookie_samesite_missing');}
         }
       }
     }catch(e){L('s-out','⚠️ Cookie check: '+e.message,'warn');}
@@ -671,11 +878,14 @@ async function runScan(){
       }else if(acao==='*'){
         Lrisk('s-out','⚠️ CORS Wildcard (*): All origins can read responses','MEDIUM','warn');
         L('s-out','   → FIX: Specify allowed origins instead of using wildcard','dim');
+        Lexplain('s-out','cors_wildcard');
       }else if(acao.includes('evil-attacker')){
         Lrisk('s-out','🚨 CORS REFLECTS attacker origin! Cross-site requests allowed','HIGH','err');
+        Lexplain('s-out','cors_reflected');
         if(acac==='true'){
           Lrisk('s-out','🚨 CRITICAL: CORS + credentials=true — session hijacking possible!','CRITICAL','err');
           L('s-out','   → FIX: Never use Access-Control-Allow-Credentials:true with wildcard or reflected origin','dim');
+          Lexplain('s-out','cors_credentials_critical');
         }
       }else{
         Lrisk('s-out','✅ CORS: Specific origin allowed ('+acao+')','LOW','ok');
@@ -710,6 +920,7 @@ async function runScan(){
           Lrisk('s-out','🚨 SQL INJECTION DETECTED! Error: "'+hit+'"','CRITICAL','err');
           L('s-out','   Payload: '+p,'dim');
           L('s-out','   → FIX: Use parameterized queries / prepared statements. NEVER concatenate user input into SQL!','warn');
+          Lexplain('s-out','sqli_detected');
           found=true;break;
         }
       }
@@ -731,6 +942,7 @@ async function runScan(){
       if(body.includes(payload)){
         Lrisk('s-out','🚨 REFLECTED XSS DETECTED! Payload reflected unencoded in response','CRITICAL','err');
         L('s-out','   → FIX: HTML-encode all user input before rendering. Use Content-Security-Policy.','warn');
+        Lexplain('s-out','xss_reflected');
       }else if(body.includes(encoded)){
         Lrisk('s-out','⚠️ Payload reflected but HTML-encoded — likely safe, verify CSP','MEDIUM','warn');
       }else{
@@ -760,6 +972,7 @@ async function runScan(){
         if(isDangerous){
           Lrisk('s-out','🚨 Port '+port+' ('+svc+') OPEN — exposed sensitive service!',svc==='Docker API (DANGEROUS)'?'CRITICAL':'HIGH','err');
           L('s-out','   → FIX: Firewall port '+port+' — restrict access to trusted IPs only','dim');
+          Lexplain('s-out','port_dangerous',svc+' on port '+port);
         }else{
           Lrisk('s-out','✅ Port '+port+' ('+svc+') — Open (expected)','INFO','ok');
         }
@@ -808,6 +1021,7 @@ async function runScan(){
         if(r.status===200){
           Lrisk('s-out','🚨 FOUND (200): '+base+path+' — '+desc,level,'err');
           L('s-out','   → FIX: Remove or restrict access to this file/path','dim');
+          if(level==='CRITICAL'||level==='HIGH') Lexplain('s-out','sensitive_file',path);
         }else if(r.status===403){
           Lrisk('s-out','⚠️ FORBIDDEN (403): '+path+' — exists but access denied','LOW','warn');
         }else if(r.status===401){
