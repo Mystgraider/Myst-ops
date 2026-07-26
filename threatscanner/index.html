@@ -144,7 +144,7 @@ option{background:var(--bg2)}
     <div class="stat" id="st-m"><div class="stat-n warn" id="sn-m">0</div><div class="stat-l">MEDIUM</div></div>
     <div class="stat" id="st-l"><div class="stat-n ok" id="sn-l">0</div><div class="stat-l">LOW/INFO</div></div>
   </div>
-  <div class="output" id="s-out"><span class="dim">Ready. Enter a URL and click Scan.</span></div>
+  <div class="output" id="s-out"><span class="dim placeholder">Ready. Enter a URL and click Scan.</span></div>
   <button class="btn btn-full" onclick="save('s-out','FullScan')">💾 Save Report</button>
 </div>
 
@@ -160,7 +160,7 @@ option{background:var(--bg2)}
       </div>
     </div>
   </div>
-  <div class="output" id="h-out"><span class="dim">Enter URL to dump all response headers.</span></div>
+  <div class="output" id="h-out"><span class="dim placeholder">Enter URL to dump all response headers.</span></div>
   <button class="btn btn-full" onclick="save('h-out','Headers')">💾 Save Report</button>
 </div>
 
@@ -255,7 +255,7 @@ option{background:var(--bg2)}
       </div>
     </div>
   </div>
-  <div class="output" id="cs-out"><span class="dim">Enter URL to scan for CSRF vulnerabilities.</span></div>
+  <div class="output" id="cs-out"><span class="dim placeholder">Enter URL to scan for CSRF vulnerabilities.</span></div>
   <button class="btn btn-full" onclick="save('cs-out','CSRF')">💾 Save Report</button>
 </div>
 
@@ -283,7 +283,7 @@ option{background:var(--bg2)}
     <div class="stat show" id="sd-st2"><div class="stat-n info" id="sd-n2">0</div><div class="stat-l">Live</div></div>
     <div class="stat show" id="sd-st3"><div class="stat-n warn" id="sd-n3">0</div><div class="stat-l">Dead</div></div>
   </div>
-  <div class="output" id="sd-out"><span class="dim">Enter domain to discover subdomains via CT logs.</span></div>
+  <div class="output" id="sd-out"><span class="dim placeholder">Enter domain to discover subdomains via CT logs.</span></div>
   <button class="btn btn-full" onclick="save('sd-out','Subdomains')">💾 Save Report</button>
 </div>
 
@@ -409,7 +409,7 @@ option{background:var(--bg2)}
       <p class="note" style="margin-top:8px">Note: Custom headers apply on next Connect.</p>
     </div>
   </div>
-  <div class="output" id="ws-out"><span class="dim">Connect to a WebSocket endpoint first.</span></div>
+  <div class="output" id="ws-out"><span class="dim placeholder">Connect to a WebSocket endpoint first.</span></div>
   <button class="btn btn-full" onclick="save('ws-out','WebSocket')">💾 Save Report</button>
 </div>
 
@@ -433,7 +433,7 @@ option{background:var(--bg2)}
     <div class="stat" id="cst-m"><div class="stat-n warn" id="csn-m">0</div><div class="stat-l">MEDIUM</div></div>
     <div class="stat" id="cst-l"><div class="stat-n ok" id="csn-l">0</div><div class="stat-l">LOW/INFO</div></div>
   </div>
-  <div class="output" id="cs-out"><span class="dim">Paste code or load a file, then click Scan Code.</span></div>
+  <div class="output" id="cs-out"><span class="dim placeholder">Paste code or load a file, then click Scan Code.</span></div>
   <button class="btn btn-full" onclick="save('cs-out','CodeScan')">💾 Save Report</button>
 </div>
 
@@ -472,7 +472,7 @@ function stopAll(){stopped=true;if(wsSocket){wsSocket.close();wsSocket=null;}}
 
 function L(id,msg,cls='white'){
   const el=document.getElementById(id);
-  if(el.querySelector('.dim'))el.innerHTML='';
+  if(el.querySelector('.placeholder'))el.innerHTML='';
   const d=document.createElement('div');
   d.className='ll '+cls;
   d.textContent=msg;
@@ -486,7 +486,7 @@ function risk(level){
 }
 function Lrisk(id,msg,level,cls){
   const el=document.getElementById(id);
-  if(el.querySelector('.dim'))el.innerHTML='';
+  if(el.querySelector('.placeholder'))el.innerHTML='';
   const d=document.createElement('div');
   d.className='ll '+(cls||'white');
   d.innerHTML=msg+risk(level);
