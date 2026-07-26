@@ -22,7 +22,16 @@ if (!DASHBOARD_TOKEN) {
   console.error('CRITICAL: DASHBOARD_TOKEN is not set. Every request will be rejected (fail-closed).');
 }
 
-// Fail-closed auth: every /api route requires the correct token.
+// Health check MUST be registered before the auth middleware below -
+// Render's own health checker can't send our custom dashboard token, so if
+// this were behind the auth check it would always 404 and Render would
+// wait forever for a successful health check, eventually timing out the
+// deploy. This is exactly what happened before this fix.
+app.get('/api/health', (req, res) => {
+  res.json({ status: 'ok', repo: `${REPO_OWNER}/${REPO_NAME}` });
+});
+
+// Fail-closed auth: every other /api route requires the correct token.
 // If DASHBOARD_TOKEN isn't configured at all, nothing works - by design.
 app.use('/api', (req, res, next) => {
   if (!DASHBOARD_TOKEN) return res.status(404).json({ error: 'Not found' });
@@ -52,10 +61,6 @@ const ALLOWED_WORKFLOWS = new Set([
   'security-analyst-scan.yml',
   'ghost-smoke-test.yml',
 ]);
-
-app.get('/api/health', (req, res) => {
-  res.json({ status: 'ok', repo: `${REPO_OWNER}/${REPO_NAME}` });
-});
 
 // Trigger a workflow_dispatch run
 app.post('/api/trigger/:workflow', async (req, res) => {
