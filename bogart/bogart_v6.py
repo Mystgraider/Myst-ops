@@ -31,6 +31,13 @@ from pathlib import Path
 # behavior), or overridden via environment variables - which is what the
 # GitHub Actions workflow uses so you don't have to edit this file per scan.
 TARGET_DOMAIN = os.getenv("BOGART_TARGET_DOMAIN", "example.com")            # ← CHANGE THIS
+# Be forgiving if a full URL got pasted in instead of a bare domain
+# (e.g. "https://example.com/" instead of "example.com") - strip the
+# scheme and any path/slashes so crt.sh queries and the report filename
+# don't break on stray "://" characters.
+if "://" in TARGET_DOMAIN:
+    TARGET_DOMAIN = TARGET_DOMAIN.split("://", 1)[1]
+TARGET_DOMAIN = TARGET_DOMAIN.split("/", 1)[0].strip()
 PROGRAM_NAME = os.getenv("BOGART_PROGRAM_NAME", "Example Bug Bounty")       # ← CHANGE THIS
 _scope_env = os.getenv("BOGART_SCOPE_ALLOWLIST", "")
 SCOPE_ALLOWLIST = [s.strip() for s in _scope_env.split(",") if s.strip()] if _scope_env \
@@ -601,7 +608,8 @@ def generate_report():
     
     conn.close()
     
-    filename = f"BOGART_REPORT_{TARGET_DOMAIN.replace('.', '_')}_{datetime.now().strftime('%Y%m%d_%H%M')}.md"
+    safe_domain = re.sub(r'[^A-Za-z0-9._-]', '_', TARGET_DOMAIN)
+    filename = f"BOGART_REPORT_{safe_domain}_{datetime.now().strftime('%Y%m%d_%H%M')}.md"
     with open(filename, "w", encoding="utf-8") as f:
         f.write(report)
     
