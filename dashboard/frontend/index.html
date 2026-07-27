@@ -104,11 +104,11 @@ input[type=text]:focus, select:focus{outline:none;border-color:var(--blue);}
       <div class="card">
         <div class="card-title">Bogart Recon Scan</div>
         <div class="igroup">
-          <label>Target domain</label>
+          <label>Target domain (bare domain, no https:// or slashes)</label>
           <input type="text" id="bg-domain" placeholder="stage01.golinks.io">
         </div>
         <div class="igroup">
-          <label>Scope allowlist (comma-separated)</label>
+          <label>Scope allowlist (comma-separated, bare domains)</label>
           <input type="text" id="bg-scope" placeholder="stage01.golinks.io">
         </div>
         <div class="igroup">
@@ -116,8 +116,8 @@ input[type=text]:focus, select:focus{outline:none;border-color:var(--blue);}
           <input type="text" id="bg-program" placeholder="Bug Bounty Program">
         </div>
         <button class="btn" onclick="trigger('bogart-scan.yml', {
-          target_domain: val('bg-domain'),
-          scope_allowlist: val('bg-scope'),
+          target_domain: bareDomain(val('bg-domain')),
+          scope_allowlist: val('bg-scope').split(',').map(s=>bareDomain(s.trim())).filter(s=>s).join(','),
           program_name: val('bg-program') || 'Bug Bounty Program'
         }, 'bogart-status')">Run Scan</button>
         <div id="bogart-status"></div>
@@ -212,6 +212,14 @@ let BACKEND = '';
 let TOKEN = '';
 
 function val(id){ return document.getElementById(id).value.trim(); }
+
+function bareDomain(s){
+  if (!s) return s;
+  s = s.trim();
+  if (s.includes('://')) s = s.split('://')[1];
+  s = s.split('/')[0];
+  return s.trim();
+}
 
 function connect(){
   BACKEND = document.getElementById('g-backend').value.trim().replace(/\/$/, '');
