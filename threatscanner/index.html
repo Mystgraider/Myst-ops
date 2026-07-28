@@ -55,6 +55,26 @@ textarea{resize:vertical;min-height:70px}
 .ok{color:#4ade80}.warn{color:#fbbf24}.err{color:#f87171}
 .info{color:#60a5fa}.purple{color:#a78bfa}.orange{color:#fb923c}
 .dim{color:#475569}.white{color:#e2e8f0}
+.btn-secondary{background:transparent;border:1px solid var(--border);color:var(--text2);width:auto;padding:6px 12px;font-size:12px}
+.status-line{font-size:12.5px;padding:8px 10px;border-radius:6px;margin-top:10px}
+.status-line.ok{background:rgba(74,222,128,0.1);color:var(--green)}
+.status-line.err{background:rgba(248,113,113,0.1);color:var(--red)}
+.status-line.info{background:rgba(96,165,250,0.1);color:var(--blue)}
+.pl-tool{display:none}
+.pl-tool.active{display:block}
+.runs-list{margin-top:4px}
+.run-item{display:flex;align-items:center;justify-content:space-between;padding:9px 10px;border-bottom:1px solid var(--border);font-size:12.5px}
+.run-item:last-child{border-bottom:none}
+.run-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0;margin-right:8px}
+.run-dot.success{background:var(--green)}
+.run-dot.failure{background:var(--red)}
+.run-dot.in_progress{background:var(--yellow);animation:plpulse 1.2s infinite}
+.run-dot.queued{background:var(--text3)}
+@keyframes plpulse{0%,100%{opacity:1}50%{opacity:0.4}}
+.run-left{display:flex;align-items:center;flex:1;min-width:0}
+.run-time{color:var(--text3);flex-shrink:0;margin-left:8px}
+.run-links{display:flex;gap:6px;margin-top:2px}
+.run-links a{color:var(--blue);font-size:11px;text-decoration:none}
 .explain-block{background:#0d1526;border-left:3px solid var(--orange);border-radius:4px;padding:8px 10px;margin:3px 0 10px 0;font-family:'Segoe UI',system-ui,sans-serif;font-size:11.5px;line-height:1.6;color:var(--text2)}
 .ex-row{margin-bottom:3px}
 .ex-row:last-child{margin-bottom:0}
@@ -110,6 +130,7 @@ option{background:var(--bg2)}
   <button class="nav-btn" onclick="go('router',this)">📡 Router/WiFi</button>
   <button class="nav-btn" onclick="go('ws',this)">🟠 WebSocket</button>
   <button class="nav-btn" onclick="go('codescan',this)">🧩 Code Scan</button>
+  <button class="nav-btn" onclick="go('pipeline',this)">🚀 Pipeline</button>
 </div>
 
 <div class="content">
@@ -433,8 +454,137 @@ option{background:var(--bg2)}
     <div class="stat" id="cst-m"><div class="stat-n warn" id="csn-m">0</div><div class="stat-l">MEDIUM</div></div>
     <div class="stat" id="cst-l"><div class="stat-n ok" id="csn-l">0</div><div class="stat-l">LOW/INFO</div></div>
   </div>
-  <div class="output" id="cs-out"><span class="dim placeholder">Paste code or load a file, then click Scan Code.</span></div>
-  <button class="btn btn-full" onclick="save('cs-out','CodeScan')">💾 Save Report</button>
+  <div class="output" id="codescan-out"><span class="dim placeholder">Paste code or load a file, then click Scan Code.</span></div>
+  <button class="btn btn-full" onclick="save('codescan-out','CodeScan')">💾 Save Report</button>
+</div>
+
+<!-- ══════════════ PIPELINE (bogart/openosint/argo/security-analyst) ══════════════ -->
+<div id="tool-pipeline" class="tool-panel">
+  <div class="card" id="pl-gate">
+    <div class="card-title">Connect Dashboard Backend</div>
+    <div class="igroup">
+      <label>Backend URL</label>
+      <input type="text" id="pl-backend" placeholder="https://myst-ops-dashboard-backend.onrender.com">
+    </div>
+    <div class="igroup">
+      <label>Dashboard Token</label>
+      <input type="text" id="pl-token" placeholder="your DASHBOARD_TOKEN">
+    </div>
+    <button class="btn" onclick="plConnect()">Connect</button>
+    <div id="pl-gate-status"></div>
+    <div class="dim" style="margin-top:8px">Stored in this browser's local storage - shared automatically with /dashboard/ if you've already connected there.</div>
+  </div>
+
+  <div id="pl-app" style="display:none">
+    <div style="display:flex;gap:4px;flex-wrap:wrap;margin-bottom:10px">
+      <button class="nav-btn active" onclick="plShowTool('bogart',this)">Bogart</button>
+      <button class="nav-btn" onclick="plShowTool('openosint',this)">OpenOSINT</button>
+      <button class="nav-btn" onclick="plShowTool('argo',this)">Argo</button>
+      <button class="nav-btn" onclick="plShowTool('secan',this)">Security Analyst</button>
+      <button class="btn-secondary" onclick="plDisconnect()" style="margin-left:auto">Disconnect</button>
+    </div>
+
+    <div class="pl-tool active" id="pl-tool-bogart">
+      <div class="card">
+        <div class="card-title">Bogart Recon Scan</div>
+        <div class="igroup">
+          <label>Target domain (bare domain, no https:// or slashes)</label>
+          <input type="text" id="pl-bg-domain" placeholder="stage01.golinks.io">
+        </div>
+        <div class="igroup">
+          <label>Scope allowlist (comma-separated, bare domains)</label>
+          <input type="text" id="pl-bg-scope" placeholder="stage01.golinks.io">
+        </div>
+        <div class="igroup">
+          <label>Program name (optional)</label>
+          <input type="text" id="pl-bg-program" placeholder="Bug Bounty Program">
+        </div>
+        <button class="btn" onclick="plTrigger('bogart-scan.yml', {
+          target_domain: bareDomain(plVal('pl-bg-domain')),
+          scope_allowlist: plVal('pl-bg-scope').split(',').map(s=>bareDomain(s.trim())).filter(s=>s).join(','),
+          program_name: plVal('pl-bg-program') || 'Bug Bounty Program'
+        }, 'pl-bogart-status')">Run Scan</button>
+        <div id="pl-bogart-status"></div>
+      </div>
+      <div class="card">
+        <div class="card-title">Recent runs</div>
+        <div class="runs-list" id="pl-bogart-runs"><span class="dim">Loading...</span></div>
+      </div>
+    </div>
+
+    <div class="pl-tool" id="pl-tool-openosint">
+      <div class="card">
+        <div class="card-title">OpenOSINT Investigation</div>
+        <div class="igroup">
+          <label>Tool</label>
+          <select id="pl-oo-tool">
+            <option value="playbook-domain">playbook-domain (whois+subdomains+dns, no key)</option>
+            <option value="email">email (no key)</option>
+            <option value="username">username (no key)</option>
+            <option value="dns">dns (no key)</option>
+            <option value="shodan">shodan (needs key)</option>
+            <option value="virustotal">virustotal (needs key)</option>
+            <option value="censys">censys (needs key)</option>
+            <option value="github">github (needs key)</option>
+            <option value="abuseipdb">abuseipdb (needs key)</option>
+            <option value="ip2location">ip2location (needs key)</option>
+          </select>
+        </div>
+        <div class="igroup">
+          <label>Target</label>
+          <input type="text" id="pl-oo-target" placeholder="stage01.golinks.io">
+        </div>
+        <button class="btn" onclick="plTrigger('openosint.yml', {
+          tool: plVal('pl-oo-tool'),
+          target: plVal('pl-oo-target')
+        }, 'pl-openosint-status')">Run Investigation</button>
+        <div id="pl-openosint-status"></div>
+      </div>
+      <div class="card">
+        <div class="card-title">Recent runs</div>
+        <div class="runs-list" id="pl-openosint-runs"><span class="dim">Loading...</span></div>
+      </div>
+    </div>
+
+    <div class="pl-tool" id="pl-tool-argo">
+      <div class="card">
+        <div class="card-title">Argo Static Audit</div>
+        <div class="igroup">
+          <label>Repo path</label>
+          <input type="text" id="pl-ar-path" value=".">
+        </div>
+        <div class="igroup">
+          <label>Runner</label>
+          <select id="pl-ar-runner">
+            <option value="mock">mock (free, fixtures)</option>
+            <option value="headless">headless (real audit, costs tokens)</option>
+          </select>
+        </div>
+        <button class="btn" onclick="plTrigger('argo-audit.yml', {
+          repo_path: plVal('pl-ar-path') || '.',
+          runner: plVal('pl-ar-runner')
+        }, 'pl-argo-status')">Run Audit</button>
+        <div id="pl-argo-status"></div>
+      </div>
+      <div class="card">
+        <div class="card-title">Recent runs</div>
+        <div class="runs-list" id="pl-argo-runs"><span class="dim">Loading...</span></div>
+      </div>
+    </div>
+
+    <div class="pl-tool" id="pl-tool-secan">
+      <div class="card">
+        <div class="card-title">Security Analyst Scan</div>
+        <div class="dim" style="margin-bottom:12px">Scans the whole repo (catches bogart_v6.py too). No inputs needed.</div>
+        <button class="btn" onclick="plTrigger('security-analyst-scan.yml', {}, 'pl-secan-status')">Run Scan</button>
+        <div id="pl-secan-status"></div>
+      </div>
+      <div class="card">
+        <div class="card-title">Recent runs</div>
+        <div class="runs-list" id="pl-secan-runs"><span class="dim">Loading...</span></div>
+      </div>
+    </div>
+  </div>
 </div>
 
 </div><!-- /content -->
@@ -1804,7 +1954,7 @@ function csUpdateStats(){
 
 function runCodeScan(){
   const code=document.getElementById('cs-code').value;
-  const out='cs-out';
+  const out='codescan-out';
   document.getElementById(out).innerHTML='';
   csCounts={c:0,h:0,m:0,l:0};
   csUpdateStats();
@@ -1852,6 +2002,133 @@ function runCodeScan(){
   SEP(out);
   L(out,findings.length+' finding(s) across '+lines.length+' line(s) scanned.','white');
 }
+
+// ══════════════════════════════════════════
+// PIPELINE TAB - triggers/monitors bogart, OpenOSINT, Argo, security-analyst
+// via the same dashboard backend used by /dashboard/. Shares localStorage
+// keys with it, so connecting once on either page covers both.
+// ══════════════════════════════════════════
+let PL_BACKEND = '';
+let PL_TOKEN = '';
+
+function plVal(id){ return document.getElementById(id).value.trim(); }
+
+function bareDomain(s){
+  if (!s) return s;
+  s = s.trim();
+  if (s.includes('://')) s = s.split('://')[1];
+  s = s.split('/')[0];
+  return s.trim();
+}
+
+function plConnect(){
+  PL_BACKEND = plVal('pl-backend').replace(/\/$/, '');
+  PL_TOKEN = plVal('pl-token');
+  if (!PL_BACKEND || !PL_TOKEN){
+    document.getElementById('pl-gate-status').innerHTML = '<div class="status-line err">Both fields required.</div>';
+    return;
+  }
+  localStorage.setItem('myst_ops_backend', PL_BACKEND);
+  localStorage.setItem('myst_ops_token', PL_TOKEN);
+  document.getElementById('pl-gate').style.display = 'none';
+  document.getElementById('pl-app').style.display = 'block';
+  plRefreshAllRuns();
+}
+
+function plDisconnect(){
+  localStorage.removeItem('myst_ops_backend');
+  localStorage.removeItem('myst_ops_token');
+  document.getElementById('pl-gate').style.display = 'block';
+  document.getElementById('pl-app').style.display = 'none';
+  document.getElementById('pl-backend').value = '';
+  document.getElementById('pl-token').value = '';
+}
+
+function plShowTool(name, btn){
+  document.querySelectorAll('.pl-tool').forEach(p => p.classList.remove('active'));
+  btn.parentElement.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('pl-tool-' + name).classList.add('active');
+  btn.classList.add('active');
+}
+
+async function plApiCall(path, opts){
+  opts = opts || {};
+  opts.headers = Object.assign({'X-Dashboard-Token': PL_TOKEN, 'Content-Type': 'application/json'}, opts.headers || {});
+  const res = await fetch(PL_BACKEND + path, opts);
+  const data = await res.json().catch(() => ({}));
+  return { ok: res.ok, status: res.status, data };
+}
+
+async function plTrigger(workflow, inputs, statusId){
+  const el = document.getElementById(statusId);
+  el.innerHTML = '<div class="status-line info">Triggering...</div>';
+  const { ok, data } = await plApiCall('/api/trigger/' + workflow, {
+    method: 'POST',
+    body: JSON.stringify({ inputs })
+  });
+  if (ok){
+    el.innerHTML = '<div class="status-line ok">Triggered - check Recent runs below in a few seconds.</div>';
+    setTimeout(() => plRefreshRuns(workflow), 4000);
+  } else {
+    el.innerHTML = '<div class="status-line err">Error: ' + (data.error || 'unknown') + (data.detail ? ' - ' + JSON.stringify(data.detail) : '') + '</div>';
+  }
+}
+
+const PL_WORKFLOW_TO_LIST = {
+  'bogart-scan.yml': 'pl-bogart-runs',
+  'openosint.yml': 'pl-openosint-runs',
+  'argo-audit.yml': 'pl-argo-runs',
+  'security-analyst-scan.yml': 'pl-secan-runs',
+};
+
+function plTimeAgo(iso){
+  const diff = Math.floor((Date.now() - new Date(iso).getTime()) / 1000);
+  if (diff < 60) return diff + 's ago';
+  if (diff < 3600) return Math.floor(diff/60) + 'm ago';
+  if (diff < 86400) return Math.floor(diff/3600) + 'h ago';
+  return Math.floor(diff/86400) + 'd ago';
+}
+
+async function plRefreshRuns(workflow){
+  const listId = PL_WORKFLOW_TO_LIST[workflow];
+  const el = document.getElementById(listId);
+  const { ok, data } = await plApiCall('/api/runs/' + workflow);
+  if (!ok || !data.runs){
+    el.innerHTML = '<span class="dim">Could not load runs' + (data.error ? ': ' + data.error : '') + '</span>';
+    return;
+  }
+  if (data.runs.length === 0){
+    el.innerHTML = '<span class="dim">No runs yet.</span>';
+    return;
+  }
+  el.innerHTML = data.runs.map(r => `
+    <div class="run-item">
+      <div class="run-left">
+        <span class="run-dot ${r.conclusion || r.status}"></span>
+        <span>${r.conclusion || r.status}</span>
+      </div>
+      <div style="text-align:right">
+        <div class="run-time">${plTimeAgo(r.created_at)}</div>
+        <div class="run-links"><a href="${r.html_url}" target="_blank" rel="noopener">view on GitHub →</a></div>
+      </div>
+    </div>
+  `).join('');
+}
+
+function plRefreshAllRuns(){
+  Object.keys(PL_WORKFLOW_TO_LIST).forEach(plRefreshRuns);
+}
+
+// auto-reconnect if already configured (shared with /dashboard/ via localStorage)
+window.addEventListener('load', () => {
+  const b = localStorage.getItem('myst_ops_backend');
+  const t = localStorage.getItem('myst_ops_token');
+  if (b && t){
+    document.getElementById('pl-backend').value = b;
+    document.getElementById('pl-token').value = t;
+    plConnect();
+  }
+});
 </script>
 </body>
 </html>
