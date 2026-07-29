@@ -18,7 +18,9 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(
 .logo{font-size:17px;font-weight:700;color:var(--blue)}
 .logo span{color:var(--text2);font-weight:400;font-size:12px;margin-left:6px}
 .badge{background:#422006;color:var(--yellow);font-size:10px;padding:3px 8px;border-radius:4px}
-.nav{background:var(--bg2);border-bottom:1px solid var(--border);padding:8px 10px;display:flex;gap:4px;flex-wrap:wrap;position:sticky;top:45px;z-index:99}
+.nav{background:var(--bg2);border-bottom:1px solid var(--border);padding:8px 10px;display:flex;gap:4px;flex-wrap:wrap;position:sticky;top:45px;z-index:99;align-items:center}
+.nav-group-label{font-size:9px;text-transform:uppercase;letter-spacing:0.08em;color:var(--text3);margin-right:2px}
+.nav-sep{width:1px;align-self:stretch;background:var(--border);margin:2px 6px}
 .nav-btn{padding:6px 11px;border-radius:6px;border:1px solid var(--border);background:transparent;color:var(--text2);font-size:12px;cursor:pointer;transition:all 0.15s}
 .nav-btn:hover{background:var(--bg3);color:var(--text)}
 .nav-btn.active{background:rgba(96,165,250,0.15);color:var(--blue);border-color:rgba(96,165,250,0.5)}
@@ -121,15 +123,22 @@ option{background:var(--bg2)}
 </div>
 
 <div class="nav" id="mainNav">
+  <span class="nav-group-label">Recon</span>
   <button class="nav-btn active" onclick="go('scanner',this)">🔍 Full Scanner</button>
   <button class="nav-btn" onclick="go('headers',this)">📋 Headers</button>
+  <button class="nav-btn" onclick="go('subdomain',this)">🌐 Subdomain</button>
+  <div class="nav-sep"></div>
+  <span class="nav-group-label">Test</span>
   <button class="nav-btn" onclick="go('api',this)">🛰 API Tester</button>
   <button class="nav-btn" onclick="go('csrf',this)">🛡 CSRF</button>
-  <button class="nav-btn" onclick="go('subdomain',this)">🌐 Subdomain</button>
   <button class="nav-btn" onclick="go('brute',this)">🔐 Brute Force</button>
   <button class="nav-btn" onclick="go('router',this)">📡 Router/WiFi</button>
   <button class="nav-btn" onclick="go('ws',this)">🟠 WebSocket</button>
+  <div class="nav-sep"></div>
+  <span class="nav-group-label">Code</span>
   <button class="nav-btn" onclick="go('codescan',this)">🧩 Code Scan</button>
+  <div class="nav-sep"></div>
+  <span class="nav-group-label">Automate</span>
   <button class="nav-btn" onclick="go('pipeline',this)">🚀 Pipeline</button>
 </div>
 
